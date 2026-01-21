@@ -16,6 +16,7 @@ func SetupRouter(
 	tokenStore *redis.TokenStore,
 	userHandler *httpHandler.UserHandler,
 	todoHandler *httpHandler.TodoHandler,
+	adminHandler *httpHandler.AdminHandler,
 ) *gin.Engine {
 	r := gin.New()
 
@@ -77,6 +78,19 @@ func SetupRouter(
 			todos.PUT("/:id", todoHandler.UpdateTodo)
 			todos.DELETE("/:id", todoHandler.DeleteTodo)
 			todos.PATCH("/:id/status", todoHandler.UpdateTodoStatus)
+		}
+
+		// Admin routes (require admin role)
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(jwtManager))
+		admin.Use(middleware.RequireRole("admin"))
+		{
+			admin.POST("/users", adminHandler.CreateUser)
+			admin.GET("/users", adminHandler.ListAllUsers)
+			admin.GET("/users/:id", adminHandler.GetUser)
+			admin.DELETE("/users/:id", adminHandler.DeleteUser)
+			admin.GET("/todos", adminHandler.ListAllTodos)
+			admin.DELETE("/todos/:id", adminHandler.DeleteAnyTodo)
 		}
 
 		// Tag routes (TODO: implement in phase 3)

@@ -56,13 +56,15 @@ func main() {
 	// Initialize use cases
 	userUseCase := usecase.NewUserUseCase(userRepo, jwtManager, tokenStore)
 	todoUseCase := usecase.NewTodoUseCase(todoRepo)
+	adminUseCase := usecase.NewAdminUseCase(userRepo, todoRepo)
 
 	// Initialize handlers
 	userHandler := httpHandler.NewUserHandler(userUseCase)
 	todoHandler := httpHandler.NewTodoHandler(todoUseCase)
+	adminHandler := httpHandler.NewAdminHandler(adminUseCase)
 
 	// Initialize router
-	router := http.SetupRouter(cfg, jwtManager, tokenStore, userHandler, todoHandler)
+	router := http.SetupRouter(cfg, jwtManager, tokenStore, userHandler, todoHandler, adminHandler)
 
 	// Get port from environment or config
 	port := os.Getenv("PORT")

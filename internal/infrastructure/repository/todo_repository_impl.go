@@ -171,3 +171,29 @@ func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string
 
 	return todos, total, nil
 }
+
+// FindByFilters finds todos with filters (without user ID restriction)
+func (r *TodoRepositoryImpl) FindByFilters(status *string, priority *string, offset, limit int) ([]*entity.Todo, error) {
+	var todos []*entity.Todo
+
+	query := r.db.Model(&entity.Todo{}).Where("deleted_at IS NULL")
+
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if priority != nil {
+		query = query.Where("priority = ?", *priority)
+	}
+
+	// Get paginated results
+	result := query.Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&todos)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return todos, nil
+}

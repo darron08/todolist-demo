@@ -92,11 +92,17 @@ func (uc *UserUseCase) Register(req *dto.RegisterRequest) (*dto.RegisterResponse
 
 	// Create user entity
 	now := time.Now()
+
+	role := entity.UserRoleUser
+	if req.Role == "admin" {
+		role = entity.UserRoleAdmin
+	}
+
 	user := &entity.User{
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
-		Role:         entity.UserRoleUser,
+		Role:         role,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}

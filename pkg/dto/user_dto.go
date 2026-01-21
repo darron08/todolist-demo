@@ -1,10 +1,15 @@
 package dto
 
+import (
+	"github.com/darron08/todolist-demo/internal/domain/entity"
+)
+
 // RegisterRequest represents a registration request
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8,max=128"`
+	Role     string `json:"role" binding:"omitempty,oneof=user admin"`
 }
 
 // LoginRequest represents a login request
@@ -49,4 +54,35 @@ type UserResponse struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
+}
+
+// AdminCreateUserRequest represents an admin create user request
+type AdminCreateUserRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=50"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8,max=128"`
+	Role     string `json:"role" binding:"omitempty,oneof=user admin"`
+}
+
+// UserListResponse represents a paginated user list response
+type UserListResponse struct {
+	Data       []UserResponse `json:"data"`
+	Page       int            `json:"page"`
+	Limit      int            `json:"limit"`
+	Total      int64          `json:"total"`
+	TotalPages int            `json:"total_pages"`
+}
+
+// ToUserResponseList converts []entity.User to []UserResponse
+func ToUserResponseList(users []*entity.User) []UserResponse {
+	responses := make([]UserResponse, len(users))
+	for i, user := range users {
+		responses[i] = UserResponse{
+			UserID:   user.ID,
+			Username: user.Username,
+			Email:    user.Email,
+			Role:     string(user.Role),
+		}
+	}
+	return responses
 }

@@ -48,6 +48,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     networks:
       - todolist-network
     restart: unless-stopped
