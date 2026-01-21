@@ -4,7 +4,7 @@
 
 ## 1. 技术栈选型 (Technology Stack)
 
-* **Language:** Go (Golang) 1.22.4
+* **Language:** Go (Golang) 1.24.0
 * **Web Framework:** Gin (github.com/gin-gonic/gin) - 追求高性能与轻量级。
 * **Database:** MySQL 8.0 - 使用 InnoDB 引擎，强一致性事务支持。
 * **ORM/Data Access:** GORM v2 (需严格隔离 Model 与 DTO)。

@@ -12,7 +12,7 @@ A high-performance, scalable todo list microservice built with Go and Clean Arch
 
 ## Tech Stack
 
-- **Language**: Go 1.22.4
+- **Language**: Go 1.24.0
 - **Web Framework**: Gin
 - **Database**: MySQL 8.0
 - **Cache**: Redis
@@ -41,7 +41,7 @@ A high-performance, scalable todo list microservice built with Go and Clean Arch
 
 ### Prerequisites
 
-- Go 1.22.4+
+- Go 1.24.0+
 - Docker & Docker Compose
 - MySQL 8.0+
 - Redis (optional)
