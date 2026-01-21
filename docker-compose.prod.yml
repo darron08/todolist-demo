@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # Application service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: todolist-api:latest
+    container_name: todolist-api-prod
+    environment:
+      - GIN_MODE=release
+      - CONFIG_PATH=/app/configs/config.prod.yaml
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USERNAME=todolist_user
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=todolist_demo
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=0
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-https://app.todolist.com}
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - todolist-network
+    restart: always
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL database
+  mysql:
+    image: mysql:8.0
+    container_name: todolist-mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: todolist_demo
+      MYSQL_USER: todolist_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - todolist-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-buffer-pool-size=1G
+      --innodb-log-file-size=256M
+      --max-connections=1000
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: todolist-redis-prod
+    volumes:
+      - redis_data:/data
+    networks:
+      - todolist-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: todolist-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployments/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./deployments/nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - todolist-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  todolist-network:
+    driver: bridge
