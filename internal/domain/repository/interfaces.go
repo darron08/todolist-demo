@@ -26,7 +26,7 @@ type TodoRepository interface {
 	List(offset, limit int) ([]*entity.Todo, error)
 	FindByStatus(status entity.TodoStatus, offset, limit int) ([]*entity.Todo, error)
 	FindByDueDate(startDate, endDate *time.Time, offset, limit int) ([]*entity.Todo, error)
-	FindByUserIDAndFilters(userID int64, status *string, priority *string, offset, limit int) ([]*entity.Todo, int64, error)
+	FindByUserIDAndFilters(userID int64, status *string, priority *string, dueDateFrom, dueDateTo *time.Time, offset, limit int) ([]*entity.Todo, int64, error)
 }
 
 // TagRepository defines the interface for tag repository operations

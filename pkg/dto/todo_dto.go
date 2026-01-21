@@ -30,11 +30,13 @@ type UpdateTodoStatusRequest struct {
 
 // ListTodosRequest represents a list todos request with filters
 type ListTodosRequest struct {
-	Page     int    `form:"page" binding:"min=1"`
-	Limit    int    `form:"limit" binding:"min=1,max=100"`
-	Status   string `form:"status" binding:"omitempty,oneof=not_started in_progress completed"`
-	Priority string `form:"priority" binding:"omitempty,oneof=low medium high"`
-	Search   string `form:"search" binding:"max=100"`
+	Page        int        `form:"page" binding:"min=1"`
+	Limit       int        `form:"limit" binding:"min=1,max=100"`
+	Status      string     `form:"status" binding:"omitempty,oneof=not_started in_progress completed"`
+	Priority    string     `form:"priority" binding:"omitempty,oneof=low medium high"`
+	Search      string     `form:"search" binding:"max=100"`
+	DueDateFrom *time.Time `form:"due_date_from" binding:"omitempty"`
+	DueDateTo   *time.Time `form:"due_date_to" binding:"omitempty"`
 }
 
 // TodoResponse represents a todo response

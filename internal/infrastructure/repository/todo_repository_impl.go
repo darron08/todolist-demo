@@ -135,7 +135,7 @@ func (r *TodoRepositoryImpl) FindByDueDate(startDate, endDate *time.Time, offset
 }
 
 // FindByUserIDAndFilters finds todos by user ID with filters
-func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string, priority *string, offset, limit int) ([]*entity.Todo, int64, error) {
+func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string, priority *string, dueDateFrom, dueDateTo *time.Time, offset, limit int) ([]*entity.Todo, int64, error) {
 	var todos []*entity.Todo
 	var total int64
 
@@ -146,6 +146,12 @@ func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string
 	}
 	if priority != nil {
 		query = query.Where("priority = ?", *priority)
+	}
+	if dueDateFrom != nil {
+		query = query.Where("due_date >= ?", *dueDateFrom)
+	}
+	if dueDateTo != nil {
+		query = query.Where("due_date <= ?", *dueDateTo)
 	}
 
 	// Count total

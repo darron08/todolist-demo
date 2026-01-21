@@ -245,7 +245,7 @@ func (uc *TodoUseCase) ListTodos(userID int64, req *dto.ListTodosRequest) (*dto.
 	}
 
 	// Get todos with filters
-	todos, total, err := uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, offset, limit)
+	todos, total, err := uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, req.DueDateFrom, req.DueDateTo, offset, limit)
 	if err != nil {
 		return nil, err
 	}
