@@ -1,5 +1,5 @@
 server:
-  mode: debug  # debug, release, test
+  mode: debug
   port: "8080"
   host: "0.0.0.0"
   read_timeout: 30s
@@ -8,72 +8,71 @@ server:
 
 database:
   mysql:
-    host: localhost
+    host: mysql
     port: 3306
-    username: root
-    password: ""
-    database: todolist_demo
+    username: todolist_user
+    password: todolist_password
+    database: todolist_demo_dev
     charset: utf8mb4
     parse_time: true
     loc: Local
-    max_idle_conns: 10
-    max_open_conns: 100
-    conn_max_lifetime: 3600s
+    max_idle_conns: 5
+    max_open_conns: 20
+    conn_max_lifetime: 1800s
   
   redis:
-    host: localhost
+    host: redis
     port: 6379
     password: ""
-    database: 0
-    pool_size: 10
-    min_idle_conns: 5
+    database: 1
+    pool_size: 5
+    min_idle_conns: 2
     dial_timeout: 5s
     read_timeout: 3s
     write_timeout: 3s
 
 jwt:
-  secret: "your-secret-key-change-in-production"
-  expires_in: 24h
-  issuer: "todolist-demo"
+  secret: "dev-secret-key-not-for-production"
+  expires_in: 168h  # 7 days for development
+  issuer: "todolist-demo-dev"
 
 logger:
-  level: info  # debug, info, warn, error
-  format: json  # json, console
-  output: stdout  # stdout, file
-  file_path: ./logs/app.log
-  max_size: 100  # MB
-  max_age: 30  # days
-  max_backups: 10
+  level: debug
+  format: console
+  output: stdout
 
 cors:
   allowed_origins:
     - "http://localhost:3000"
     - "http://localhost:8080"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:8080"
   allowed_methods:
     - GET
     - POST
     - PUT
     - DELETE
     - OPTIONS
+    - PATCH
   allowed_headers:
     - Origin
     - Content-Type
     - Accept
     - Authorization
     - X-Requested-With
+    - X-Debug-Token
   exposed_headers:
     - X-Total-Count
+    - X-Debug-Token
   allow_credentials: true
   max_age: 86400
 
 swagger:
   enabled: true
   path: /swagger
-  title: "Todo List API"
-  description: "A high-performance todo list microservice"
-  version: "1.0"
+  title: "Todo List API (Development)"
+  description: "Development version of todo list microservice"
+  version: "1.0-dev"
 
 rate_limit:
-  enabled: true
-  requests_per_minute: 100
-  burst: 200
+  enabled: false  # Disabled in development

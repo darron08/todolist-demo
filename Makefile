@@ -86,11 +86,11 @@ docker-run:
 # Database migrations
 migrate-up:
 	@echo "Running database migrations..."
-	migrate -path migrations -database "mysql://root:password@tcp(localhost:3306)/todolist_demo" up
+	migrate -path migrations -database "mysql://root:rootpassword@tcp(localhost:3306)/todolist_demo_dev" up
 
 migrate-down:
 	@echo "Rolling back database migrations..."
-	migrate -path migrations -database "mysql://root:password@tcp(localhost:3306)/todolist_demo" down
+	migrate -path migrations -database "mysql://root:rootpassword@tcp(localhost:3306)/todolist_demo_dev" down
 
 migrate-create:
 	@echo "Creating new migration..."
