@@ -28,12 +28,12 @@ func (h *TodoHandler) CreateTodo(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context (will be set by auth middleware)
-	// TODO: Remove this temporary user ID when authentication is implemented
+	// Get user ID from context (set by auth middleware)
+	// Get user ID from context (set by auth middleware)
 	userID := c.GetString("UserID")
 	if userID == "" {
-		// For MVP without authentication, use a temporary user ID
-		userID = "temp-user-1"
+		response.Unauthorized(c, "user not authenticated")
+		return
 	}
 
 	todo, err := h.todoUseCase.CreateTodo(userID, &req)

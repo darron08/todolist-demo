@@ -3,9 +3,16 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/darron08/todolist-demo/internal/infrastructure/config"
+	"github.com/darron08/todolist-demo/internal/infrastructure/database"
+	"github.com/darron08/todolist-demo/internal/infrastructure/redis"
+	"github.com/darron08/todolist-demo/internal/infrastructure/repository"
 	"github.com/darron08/todolist-demo/internal/interfaces/http"
+	httpHandler "github.com/darron08/todolist-demo/internal/interfaces/http/handler"
+	"github.com/darron08/todolist-demo/internal/usecase"
+	"github.com/darron08/todolist-demo/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,8 +33,36 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// Initialize databases
+	databases, err := database.InitializeDatabases(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize databases: %v", err)
+	}
+	defer closeDatabases(databases)
+
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(databases.MySQL.GetDB())
+	todoRepo := repository.NewTodoRepository(databases.MySQL.GetDB())
+	_ = repository.NewTagRepository(databases.MySQL.GetDB())
+
+	// Initialize token store
+	tokenStore := redis.NewTokenStore(databases.Redis)
+
+	// Initialize JWT manager
+	accessTokenExpiry := 15 * time.Minute
+	refreshTokenExpiry := 7 * 24 * time.Hour
+	jwtManager := utils.NewJWTManager(cfg.JWT.Secret, cfg.JWT.Issuer, accessTokenExpiry, refreshTokenExpiry)
+
+	// Initialize use cases
+	userUseCase := usecase.NewUserUseCase(userRepo, jwtManager, tokenStore)
+	todoUseCase := usecase.NewTodoUseCase(todoRepo)
+
+	// Initialize handlers
+	userHandler := httpHandler.NewUserHandler(userUseCase)
+	todoHandler := httpHandler.NewTodoHandler(todoUseCase)
+
 	// Initialize router
-	router := http.SetupRouter(cfg)
+	router := http.SetupRouter(cfg, jwtManager, tokenStore, userHandler, todoHandler)
 
 	// Get port from environment or config
 	port := os.Getenv("PORT")
@@ -39,5 +74,19 @@ func main() {
 	log.Printf("Server starting on port %s", port)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+// closeDatabases closes all database connections
+func closeDatabases(dbs *database.Database) {
+	if dbs.MySQL != nil {
+		if err := dbs.MySQL.Close(); err != nil {
+			log.Printf("Failed to close MySQL connection: %v", err)
+		}
+	}
+	if dbs.Redis != nil {
+		if err := dbs.Redis.Close(); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
 	}
 }

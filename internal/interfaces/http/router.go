@@ -2,13 +2,21 @@ package http
 
 import (
 	"github.com/darron08/todolist-demo/internal/infrastructure/config"
+	"github.com/darron08/todolist-demo/internal/infrastructure/redis"
 	httpHandler "github.com/darron08/todolist-demo/internal/interfaces/http/handler"
 	"github.com/darron08/todolist-demo/internal/interfaces/http/middleware"
+	"github.com/darron08/todolist-demo/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter configures Gin router with all routes and middleware
-func SetupRouter(cfg *config.Config) *gin.Engine {
+func SetupRouter(
+	cfg *config.Config,
+	jwtManager *utils.JWTManager,
+	tokenStore *redis.TokenStore,
+	userHandler *httpHandler.UserHandler,
+	todoHandler *httpHandler.TodoHandler,
+) *gin.Engine {
 	r := gin.New()
 
 	// Add global middleware
@@ -43,37 +51,37 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	// API v1 routes
 	v1 := r.Group("/api/v1")
 	{
-		// Todo routes (without authentication for MVP)
-		// TODO: Add authentication middleware in phase 3
-		todoHandler := httpHandler.NewTodoHandler(nil)
-
-		todos := v1.Group("/todos")
+		// Authentication routes (public)
+		auth := v1.Group("/auth")
 		{
-			todos.POST("", todoHandler.CreateTodo)                   // Create todo
-			todos.GET("", todoHandler.ListTodos)                     // List todos
-			todos.GET("/:id", todoHandler.GetTodo)                   // Get todo by ID
-			todos.PUT("/:id", todoHandler.UpdateTodo)                // Update todo
-			todos.DELETE("/:id", todoHandler.DeleteTodo)             // Delete todo
-			todos.PATCH("/:id/status", todoHandler.UpdateTodoStatus) // Update todo status
+			auth.POST("/register", userHandler.Register)
+			auth.POST("/login", userHandler.Login)
+			auth.POST("/refresh", userHandler.RefreshToken)
+			auth.POST("/logout", userHandler.Logout)
 		}
 
-		// User routes (TODO: implement in phase 3)
-		// users := v1.Group("/users")
-		// {
-		//     users.POST("/register", userHandler.Register)
-		//     users.POST("/login", userHandler.Login)
-		// }
+		// User routes (require authentication)
+		users := v1.Group("/users")
+		users.Use(middleware.AuthMiddleware(jwtManager))
+		{
+			users.GET("/profile", userHandler.GetProfile)
+		}
 
-		// Authentication routes (TODO: implement in phase 3)
-		// auth := v1.Group("/auth")
-		// {
-		//     auth.POST("/register", authHandler.Register)
-		//     auth.POST("/login", authHandler.Login)
-		//     auth.POST("/refresh", authHandler.RefreshToken)
-		// }
+		// Todo routes (require authentication)
+		todos := v1.Group("/todos")
+		todos.Use(middleware.AuthMiddleware(jwtManager))
+		{
+			todos.POST("", todoHandler.CreateTodo)
+			todos.GET("", todoHandler.ListTodos)
+			todos.GET("/:id", todoHandler.GetTodo)
+			todos.PUT("/:id", todoHandler.UpdateTodo)
+			todos.DELETE("/:id", todoHandler.DeleteTodo)
+			todos.PATCH("/:id/status", todoHandler.UpdateTodoStatus)
+		}
 
 		// Tag routes (TODO: implement in phase 3)
 		// tags := v1.Group("/tags")
+		// tags.Use(middleware.AuthMiddleware(jwtManager))
 		// {
 		//     tags.GET("", tagHandler.ListTags)
 		//     tags.POST("", tagHandler.CreateTag)
