@@ -24,16 +24,16 @@ const (
 
 // Todo represents a todo entity in the domain layer
 type Todo struct {
-	ID          string       `json:"id"`
-	UserID      string       `json:"user_id"`
-	Title       string       `json:"title"`
-	Description string       `json:"description,omitempty"`
-	DueDate     *time.Time   `json:"due_date,omitempty"`
-	Status      TodoStatus   `json:"status"`
-	Priority    TodoPriority `json:"priority"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	DeletedAt   *time.Time   `json:"deleted_at,omitempty"`
+	ID          string       `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	UserID      string       `json:"user_id" gorm:"type:varchar(36);not null;index"`
+	Title       string       `json:"title" gorm:"type:varchar(255);not null"`
+	Description string       `json:"description,omitempty" gorm:"type:text"`
+	DueDate     *time.Time   `json:"due_date,omitempty" gorm:"type:datetime"`
+	Status      TodoStatus   `json:"status" gorm:"type:varchar(20);not null;default:'not_started'"`
+	Priority    TodoPriority `json:"priority" gorm:"type:varchar(20);not null;default:'medium'"`
+	CreatedAt   time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt   *time.Time   `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 // TableName returns the table name for GORM

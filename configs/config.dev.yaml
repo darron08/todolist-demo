@@ -8,10 +8,10 @@ server:
 
 database:
   mysql:
-    host: localhost
+    host: mysql
     port: 3306
-    username: root
-    password: ""
+    username: todolist_user
+    password: todolist_password
     database: todolist_demo_dev
     charset: utf8mb4
     parse_time: true
@@ -21,7 +21,7 @@ database:
     conn_max_lifetime: 1800s
   
   redis:
-    host: localhost
+    host: redis
     port: 6379
     password: ""
     database: 1

@@ -6,14 +6,14 @@ import (
 
 // User represents a user entity in the domain layer
 type User struct {
-	ID           string     `json:"id"`
-	Username     string     `json:"username"`
-	Email        string     `json:"email"`
-	PasswordHash string     `json:"-"` // Don't include in JSON responses
-	Role         UserRole   `json:"role"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+	ID           string     `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	Username     string     `json:"username" gorm:"type:varchar(255);uniqueIndex"`
+	Email        string     `json:"email" gorm:"type:varchar(255);uniqueIndex"`
+	PasswordHash string     `json:"-" gorm:"type:varchar(255);not null"` // Don't include in JSON responses
+	Role         UserRole   `json:"role" gorm:"type:varchar(20);not null;default:'user'"`
+	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 // UserRole represents the role of a user

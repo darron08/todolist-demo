@@ -6,18 +6,17 @@ import (
 
 // Tag represents a tag entity in the domain layer
 type Tag struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+	ID        string     `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	Name      string     `json:"name" gorm:"type:varchar(100);uniqueIndex"`
+	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"`
 }
 
-// UserTag represents the many-to-many relationship between users and tags
 type UserTag struct {
-	UserID    string    `json:"user_id"`
-	TagID     string    `json:"tag_id"`
-	CreatedAt time.Time `json:"created_at"`
+	UserID    string    `json:"user_id" gorm:"type:varchar(36);not null;primaryKey"`
+	TagID     string    `json:"tag_id" gorm:"type:varchar(36);not null;primaryKey"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName returns the table name for GORM

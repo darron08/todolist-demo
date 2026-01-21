@@ -12,6 +12,13 @@ services:
     environment:
       - GIN_MODE=debug
       - CONFIG_PATH=/app/configs/config.dev.yaml
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USERNAME=todolist_user
+      - MYSQL_PASSWORD=todolist_password
+      - MYSQL_DATABASE=todolist_demo_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./configs:/app/configs:ro
       - ./logs:/app/logs
@@ -41,7 +48,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./migrations:/docker-entrypoint-initdb.d:ro
     networks:
       - todolist-network
     restart: unless-stopped
@@ -52,12 +58,12 @@ services:
       retries: 3
       start_period: 30s
 
-  # Redis cache
+   # Redis cache
   redis:
     image: redis:7-alpine
     container_name: todolist-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:
