@@ -1,12 +1,15 @@
 package http
 
 import (
+	_ "github.com/darron08/todolist-demo/docs"
 	"github.com/darron08/todolist-demo/internal/infrastructure/config"
 	"github.com/darron08/todolist-demo/internal/infrastructure/redis"
 	httpHandler "github.com/darron08/todolist-demo/internal/interfaces/http/handler"
 	"github.com/darron08/todolist-demo/internal/interfaces/http/middleware"
 	"github.com/darron08/todolist-demo/pkg/utils"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // SetupRouter configures Gin router with all routes and middleware
@@ -37,12 +40,26 @@ func SetupRouter(
 	r.Use(middleware.CORS(corsConfig))
 
 	// Health check endpoints
+	// @Summary Health check
+	// @Description Check if the API server is running
+	// @Tags Health
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]string "Server is healthy"
+	// @Router /health [get]
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status": "healthy",
 		})
 	})
 
+	// @Summary Readiness check
+	// @Description Check if the API server is ready to accept requests
+	// @Tags Health
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]string "Server is ready"
+	// @Router /ready [get]
 	r.GET("/ready", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status": "ready",
@@ -107,7 +124,7 @@ func SetupRouter(
 
 	// Swagger documentation (if enabled)
 	if cfg.Swagger.Enabled {
-		r.Static(cfg.Swagger.Path, "./docs/swagger")
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
 	return r

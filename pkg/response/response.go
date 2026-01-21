@@ -6,12 +6,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ErrorResponse represents an error response structure for Swagger
+type ErrorResponse struct {
+	Code      int    `json:"code" example:"400"`
+	Message   string `json:"message" example:"Bad request"`
+	RequestID string `json:"request_id,omitempty" example:"abc-123"`
+}
+
+// SuccessResponse represents a success response structure for Swagger
+type SuccessResponse struct {
+	Code      int         `json:"code" example:"200"`
+	Message   string      `json:"message" example:"Success"`
+	Data      interface{} `json:"data,omitempty"`
+	RequestID string      `json:"request_id,omitempty" example:"abc-123"`
+}
+
+// PaginatedResponse represents a paginated response structure for Swagger
+type PaginatedResponse struct {
+	Code       int         `json:"code" example:"200"`
+	Message    string      `json:"message" example:"Success"`
+	Data       interface{} `json:"data,omitempty"`
+	RequestID  string      `json:"request_id,omitempty" example:"abc-123"`
+	Pagination *Pagination `json:"pagination,omitempty"`
+}
+
 // Response represents the standard API response structure
 type Response struct {
-	Code      int         `json:"code"`
-	Message   string      `json:"message"`
+	Code      int         `json:"code" example:"200"`
+	Message   string      `json:"message" example:"Success"`
 	Data      interface{} `json:"data,omitempty"`
-	RequestID string      `json:"request_id,omitempty"`
+	RequestID string      `json:"request_id,omitempty" example:"abc-123"`
 }
 
 // PaginationResponse represents a paginated response

@@ -23,6 +23,17 @@ func NewUserHandler(userUseCase *usecase.UserUseCase) *UserHandler {
 }
 
 // Register handles POST /api/v1/auth/register
+// @Summary Register a new user
+// @Description Register a new user account with username, email, and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "User registration details"
+// @Success 201 {object} dto.RegisterResponse "User successfully registered"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format or validation error"
+// @Failure 409 {object} response.ErrorResponse "Username or email already exists"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /auth/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,6 +72,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 }
 
 // Login handles POST /api/v1/auth/login
+// @Summary User login
+// @Description Authenticate user and return access and refresh tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "User login credentials"
+// @Success 200 {object} dto.LoginResponse "Login successful"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format"
+// @Failure 401 {object} response.ErrorResponse "Invalid username or password"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -83,6 +105,17 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 // RefreshToken handles POST /api/v1/auth/refresh
+// @Summary Refresh access token
+// @Description Get a new access token using a refresh token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} dto.RefreshTokenResponse "Token successfully refreshed"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format"
+// @Failure 401 {object} response.ErrorResponse "Invalid or expired refresh token"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /auth/refresh [post]
 func (h *UserHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -105,6 +138,17 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 }
 
 // Logout handles POST /api/v1/auth/logout
+// @Summary User logout
+// @Description Logout current user and invalidate the refresh token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} response.SuccessResponse "Logout successful"
+// @Failure 400 {object} response.ErrorResponse "Invalid authorization header"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /auth/logout [post]
 func (h *UserHandler) Logout(c *gin.Context) {
 	// Get user ID and token ID from context
 	userIDStr := c.GetString("UserID")
@@ -146,6 +190,18 @@ func (h *UserHandler) Logout(c *gin.Context) {
 }
 
 // GetProfile handles GET /api/v1/users/profile
+// @Summary Get current user profile
+// @Description Retrieve the profile information of the currently authenticated user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} dto.UserResponse "User profile retrieved successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid user ID"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "User not found"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /users/profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
 	userIDStr := c.GetString("UserID")

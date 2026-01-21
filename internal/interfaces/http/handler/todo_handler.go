@@ -23,6 +23,18 @@ func NewTodoHandler(todoUseCase *usecase.TodoUseCase) *TodoHandler {
 }
 
 // CreateTodo handles POST /api/v1/todos
+// @Summary Create a new todo
+// @Description Create a new todo item for the authenticated user
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body dto.CreateTodoRequest true "Todo details"
+// @Success 201 {object} dto.TodoResponse "Todo created successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format or validation error"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos [post]
 func (h *TodoHandler) CreateTodo(c *gin.Context) {
 	var req dto.CreateTodoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,6 +73,19 @@ func (h *TodoHandler) CreateTodo(c *gin.Context) {
 }
 
 // GetTodo handles GET /api/v1/todos/:id
+// @Summary Get a todo by ID
+// @Description Retrieve a specific todo item by its ID (only own todos)
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Todo ID"
+// @Success 200 {object} dto.TodoResponse "Todo retrieved successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid todo ID"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "Todo not found"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos/{id} [get]
 func (h *TodoHandler) GetTodo(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
@@ -106,6 +131,20 @@ func (h *TodoHandler) GetTodo(c *gin.Context) {
 }
 
 // UpdateTodo handles PUT /api/v1/todos/:id
+// @Summary Update a todo
+// @Description Update an existing todo item by its ID (only own todos)
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Todo ID"
+// @Param request body dto.UpdateTodoRequest true "Updated todo details"
+// @Success 200 {object} dto.TodoResponse "Todo updated successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format or validation error"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "Todo not found"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos/{id} [put]
 func (h *TodoHandler) UpdateTodo(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
@@ -165,6 +204,19 @@ func (h *TodoHandler) UpdateTodo(c *gin.Context) {
 }
 
 // DeleteTodo handles DELETE /api/v1/todos/:id
+// @Summary Delete a todo
+// @Description Delete a todo item by its ID (only own todos)
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Todo ID"
+// @Success 200 {object} response.SuccessResponse "Todo deleted successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid todo ID"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "Todo not found"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos/{id} [delete]
 func (h *TodoHandler) DeleteTodo(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
@@ -210,6 +262,20 @@ func (h *TodoHandler) DeleteTodo(c *gin.Context) {
 }
 
 // UpdateTodoStatus handles PATCH /api/v1/todos/:id/status
+// @Summary Update todo status
+// @Description Update the status of a todo item by its ID (only own todos)
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Todo ID"
+// @Param request body dto.UpdateTodoStatusRequest true "New status"
+// @Success 200 {object} dto.TodoResponse "Todo status updated successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid request format or validation error"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "Todo not found"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos/{id}/status [patch]
 func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
@@ -265,6 +331,23 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 }
 
 // ListTodos handles GET /api/v1/todos
+// @Summary List todos
+// @Description Retrieve a paginated list of todos for the authenticated user with optional filters
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number" default(1) minimum(1)
+// @Param limit query int false "Items per page" default(20) minimum(1) maximum(100)
+// @Param status query string false "Filter by status" Enums(not_started, in_progress, completed)
+// @Param priority query string false "Filter by priority" Enums(low, medium, high)
+// @Param search query string false "Search in title and description" maxlength(100)
+// @Param due_date_from query string false "Filter todos due after this date (RFC3339 format)" format(date-time)
+// @Param due_date_to query string false "Filter todos due before this date (RFC3339 format)" format(date-time)
+// @Success 200 {object} response.PaginatedResponse "Todos retrieved successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid user ID or request format"
+// @Failure 500 {object} response.ErrorResponse "Internal server error"
+// @Router /todos [get]
 func (h *TodoHandler) ListTodos(c *gin.Context) {
 	// TODO: Remove this temporary user ID when authentication is implemented
 	userIDStr := c.GetString("UserID")

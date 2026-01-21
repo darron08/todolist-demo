@@ -37,6 +37,8 @@ COPY --from=builder /app/todolist-api .
 
 # Copy configuration files
 COPY --from=builder /app/configs ./configs
+# Copy swagger docs
+COPY --from=builder /app/docs ./docs
 
 # Create necessary directories
 RUN mkdir -p logs && \

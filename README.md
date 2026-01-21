@@ -221,10 +221,79 @@ curl -X DELETE http://localhost:8080/api/v1/todos/1 \
 
 ## API Documentation
 
-Interactive API documentation is available at `/swagger/index.html` when running the application:
+Interactive API documentation is available via Swagger UI when running the application:
 - Swagger UI: http://localhost:8080/swagger/index.html
+- Swagger JSON: http://localhost:8080/swagger/doc.json
+- Swagger YAML: http://localhost:8080/swagger/doc.yaml
 
-Full API specifications include authentication, todo management, and admin endpoints.
+### Using Swagger UI
+
+1. **Access the documentation**
+   - Start the application: `docker-compose up -d` or `make run`
+   - Open your browser and navigate to: http://localhost:8080/swagger/index.html
+
+2. **Explore API endpoints**
+   - The API is organized into tags: Authentication, Users, Todos, Admin, and Health
+   - Click on any tag to expand and view its endpoints
+
+3. **Test API endpoints**
+   - Click on an endpoint to view its details (parameters, responses, etc.)
+   - Click the **Try it out** button
+   - Fill in the required parameters
+   - Click **Execute** to send a real request
+   - View the response, status code, and request duration
+
+4. **Authentication**
+   - For endpoints requiring authentication, you need to provide a Bearer token
+   - First, use the `/api/v1/auth/login` endpoint to get your access token
+   - Copy the `access_token` from the response
+   - Click the **Authorize** button in Swagger UI (top right)
+   - Enter your token with the `Bearer ` prefix: `Bearer <your-access-token>`
+   - Click **Authorize** and close the dialog
+   - Now you can call authenticated endpoints
+
+### API Endpoint Overview
+
+#### Authentication (Public)
+- `POST /api/v1/auth/register` - Register a new user
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Refresh access token
+- `POST /api/v1/auth/logout` - User logout
+
+#### Users (Requires Authentication)
+- `GET /api/v1/users/profile` - Get current user profile
+
+#### Todos (Requires Authentication)
+- `POST /api/v1/todos` - Create a new todo
+- `GET /api/v1/todos` - List todos (with pagination and filters)
+- `GET /api/v1/todos/:id` - Get a specific todo
+- `PUT /api/v1/todos/:id` - Update a todo
+- `DELETE /api/v1/todos/:id` - Delete a todo
+- `PATCH /api/v1/todos/:id/status` - Update todo status
+
+#### Admin (Requires Admin Role)
+- `POST /api/v1/admin/users` - Create a user
+- `GET /api/v1/admin/users` - List all users
+- `GET /api/v1/admin/users/:id` - Get a specific user
+- `DELETE /api/v1/admin/users/:id` - Delete a user
+- `GET /api/v1/admin/todos` - List all todos
+- `DELETE /api/v1/admin/todos/:id` - Delete any todo
+
+#### Health Checks
+- `GET /health` - Health check
+- `GET /ready` - Readiness check
+
+### Regenerating Swagger Documentation
+
+If you modify any API endpoints or handlers, regenerate the Swagger documentation:
+
+```bash
+make swagger
+# or
+swag init -g cmd/api/main.go -o docs
+```
+
+The documentation will be regenerated in the `docs/` directory.
 
 ## Contributing
 

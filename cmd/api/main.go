@@ -18,9 +18,23 @@ import (
 
 // @title Todo List API
 // @version 1.0
-// @description A high-performance todo list microservice
+// @description A high-performance todo list microservice built with Go and Clean Architecture principles.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
 // @host localhost:8080
 // @BasePath /api/v1
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Enter the token with the `Bearer ` prefix, e.g. "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 func main() {
 	// Load configuration
 	cfg, err := config.Load()

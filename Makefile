@@ -119,7 +119,7 @@ mocks:
 # Swagger generation
 swagger:
 	@echo "Generating Swagger documentation..."
-	swag init -g cmd/api/main.go -o docs/swagger
+	swag init -g cmd/api/main.go -o docs
 
 # Security scan
 security:
