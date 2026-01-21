@@ -24,8 +24,8 @@ const (
 
 // Todo represents a todo entity in the domain layer
 type Todo struct {
-	ID          string       `json:"id" gorm:"primaryKey;type:varchar(36)"`
-	UserID      string       `json:"user_id" gorm:"type:varchar(36);not null;index"`
+	ID          int64        `json:"id" gorm:"primaryKey;autoIncrement;type:bigint"`
+	UserID      int64        `json:"user_id" gorm:"type:bigint;not null;index"`
 	Title       string       `json:"title" gorm:"type:varchar(255);not null"`
 	Description string       `json:"description,omitempty" gorm:"type:text"`
 	DueDate     *time.Time   `json:"due_date,omitempty" gorm:"type:datetime"`

@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -26,7 +27,7 @@ func (m *MockUserRepository) Create(user *entity.User) error {
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) FindByID(id string) (*entity.User, error) {
+func (m *MockUserRepository) FindByID(id int64) (*entity.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -58,7 +59,7 @@ func (m *MockUserRepository) Update(user *entity.User) error {
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) Delete(id string) error {
+func (m *MockUserRepository) Delete(id int64) error {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil
@@ -79,7 +80,7 @@ type MockTokenStore struct {
 	mock.Mock
 }
 
-func (m *MockTokenStore) StoreRefreshToken(ctx interface{}, userID, tokenID, token string) error {
+func (m *MockTokenStore) StoreRefreshToken(ctx context.Context, userID int64, tokenID, token string) error {
 	args := m.Called(ctx, userID, tokenID, token)
 	if args.Get(0) == nil {
 		return nil
@@ -87,7 +88,7 @@ func (m *MockTokenStore) StoreRefreshToken(ctx interface{}, userID, tokenID, tok
 	return args.Error(0)
 }
 
-func (m *MockTokenStore) ValidateRefreshToken(ctx interface{}, userID, tokenID string) (bool, error) {
+func (m *MockTokenStore) ValidateRefreshToken(ctx context.Context, userID int64, tokenID string) (bool, error) {
 	args := m.Called(ctx, userID, tokenID)
 	if args.Get(0) == nil {
 		return false, args.Error(1)
@@ -95,8 +96,16 @@ func (m *MockTokenStore) ValidateRefreshToken(ctx interface{}, userID, tokenID s
 	return args.Get(0).(bool), args.Error(1)
 }
 
-func (m *MockTokenStore) DeleteRefreshToken(ctx interface{}, userID, tokenID string) error {
+func (m *MockTokenStore) DeleteRefreshToken(ctx context.Context, userID int64, tokenID string) error {
 	args := m.Called(ctx, userID, tokenID)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Error(0)
+}
+
+func (m *MockTokenStore) DeleteAllUserTokens(ctx context.Context, userID int64) error {
+	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil
 	}
@@ -144,7 +153,7 @@ func TestUserUseCase_Register_UsernameExists(t *testing.T) {
 	}
 
 	// Setup mock expectations
-	mockRepo.On("FindByUsername", req.Username).Return(&entity.User{ID: "123"}, nil)
+	mockRepo.On("FindByUsername", req.Username).Return(&entity.User{ID: 123}, nil)
 
 	_, err := userUseCase.Register(req)
 

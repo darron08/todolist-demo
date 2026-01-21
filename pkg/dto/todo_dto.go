@@ -39,8 +39,8 @@ type ListTodosRequest struct {
 
 // TodoResponse represents a todo response
 type TodoResponse struct {
-	ID          string     `json:"id"`
-	UserID      string     `json:"user_id"`
+	ID          int64      `json:"id"`
+	UserID      int64      `json:"user_id"`
 	Title       string     `json:"title"`
 	Description string     `json:"description,omitempty"`
 	DueDate     *time.Time `json:"due_date,omitempty"`

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/darron08/todolist-demo/internal/usecase"
@@ -105,15 +107,22 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 // Logout handles POST /api/v1/auth/logout
 func (h *UserHandler) Logout(c *gin.Context) {
 	// Get user ID and token ID from context
-	userID := c.GetString("UserID")
+	userIDStr := c.GetString("UserID")
 	tokenID := c.GetString("TokenID")
 
-	if userID == "" {
+	if userIDStr == "" {
 		response.Unauthorized(c, "user not authenticated")
 		return
 	}
 
-	// For logout, we need the token ID from JWT claims
+	// Convert user ID to int64
+	userID, parseErr := strconv.ParseInt(userIDStr, 10, 64)
+	if parseErr != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
+	}
+
+	// For logout, we need to token ID from JWT claims
 	// We'll extract it from the Authorization header and validate it
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -121,7 +130,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	// Note: We should pass the actual token ID from the JWT
+	// Note: We should pass to actual token ID from to JWT
 	// For now, we'll use a simple implementation
 	err := h.userUseCase.Logout(userID, tokenID)
 	if err != nil {
@@ -139,9 +148,16 @@ func (h *UserHandler) Logout(c *gin.Context) {
 // GetProfile handles GET /api/v1/users/profile
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
-	userID := c.GetString("UserID")
-	if userID == "" {
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
 		response.Unauthorized(c, "user not authenticated")
+		return
+	}
+
+	// Convert user ID to int64
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user ID")
 		return
 	}
 

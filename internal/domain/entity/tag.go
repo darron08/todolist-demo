@@ -6,7 +6,7 @@ import (
 
 // Tag represents a tag entity in the domain layer
 type Tag struct {
-	ID        string     `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	ID        int64      `json:"id" gorm:"primaryKey;autoIncrement;type:bigint"`
 	Name      string     `json:"name" gorm:"type:varchar(100);uniqueIndex"`
 	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
@@ -14,8 +14,8 @@ type Tag struct {
 }
 
 type UserTag struct {
-	UserID    string    `json:"user_id" gorm:"type:varchar(36);not null;primaryKey"`
-	TagID     string    `json:"tag_id" gorm:"type:varchar(36);not null;primaryKey"`
+	UserID    int64     `json:"user_id" gorm:"type:bigint;not null;primaryKey"`
+	TagID     int64     `json:"tag_id" gorm:"type:bigint;not null;primaryKey"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 

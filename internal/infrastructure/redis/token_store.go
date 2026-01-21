@@ -30,13 +30,13 @@ func NewTokenStore(redisClient *redis.Client) *TokenStore {
 }
 
 // StoreRefreshToken stores a refresh token in Redis
-func (s *TokenStore) StoreRefreshToken(ctx context.Context, userID, tokenID, token string) error {
+func (s *TokenStore) StoreRefreshToken(ctx context.Context, userID int64, tokenID, token string) error {
 	key := s.buildRefreshTokenKey(userID, tokenID)
 	return s.client.Set(ctx, key, token, refreshTokenExpiry)
 }
 
 // ValidateRefreshToken checks if a refresh token exists in Redis
-func (s *TokenStore) ValidateRefreshToken(ctx context.Context, userID, tokenID string) (bool, error) {
+func (s *TokenStore) ValidateRefreshToken(ctx context.Context, userID int64, tokenID string) (bool, error) {
 	key := s.buildRefreshTokenKey(userID, tokenID)
 	exists, err := s.client.Exists(ctx, key)
 	if err != nil {
@@ -46,13 +46,13 @@ func (s *TokenStore) ValidateRefreshToken(ctx context.Context, userID, tokenID s
 }
 
 // DeleteRefreshToken deletes a refresh token from Redis
-func (s *TokenStore) DeleteRefreshToken(ctx context.Context, userID, tokenID string) error {
+func (s *TokenStore) DeleteRefreshToken(ctx context.Context, userID int64, tokenID string) error {
 	key := s.buildRefreshTokenKey(userID, tokenID)
 	return s.client.Del(ctx, key)
 }
 
 // DeleteAllUserTokens deletes all refresh tokens for a user
-func (s *TokenStore) DeleteAllUserTokens(ctx context.Context, userID string) error {
+func (s *TokenStore) DeleteAllUserTokens(ctx context.Context, userID int64) error {
 	// Build pattern for all user tokens
 	pattern := s.buildRefreshTokenPattern(userID)
 
@@ -71,11 +71,11 @@ func GenerateTokenID() string {
 }
 
 // buildRefreshTokenKey builds a Redis key for a refresh token
-func (s *TokenStore) buildRefreshTokenKey(userID, tokenID string) string {
-	return fmt.Sprintf("%s%s:%s", refreshTokenKeyPrefix, userID, tokenID)
+func (s *TokenStore) buildRefreshTokenKey(userID int64, tokenID string) string {
+	return fmt.Sprintf("%s%d:%s", refreshTokenKeyPrefix, userID, tokenID)
 }
 
 // buildRefreshTokenPattern builds a pattern for user's refresh tokens
-func (s *TokenStore) buildRefreshTokenPattern(userID string) string {
-	return fmt.Sprintf("%s%s:*", refreshTokenKeyPrefix, userID)
+func (s *TokenStore) buildRefreshTokenPattern(userID int64) string {
+	return fmt.Sprintf("%s%d:*", refreshTokenKeyPrefix, userID)
 }

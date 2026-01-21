@@ -50,7 +50,7 @@ func (r *UserRepositoryImpl) Create(user *entity.User) error {
 }
 
 // FindByID finds a user by ID
-func (r *UserRepositoryImpl) FindByID(id string) (*entity.User, error) {
+func (r *UserRepositoryImpl) FindByID(id int64) (*entity.User, error) {
 	var user entity.User
 	result := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&user)
 	if result.Error != nil {
@@ -101,7 +101,7 @@ func (r *UserRepositoryImpl) Update(user *entity.User) error {
 }
 
 // Delete soft deletes a user
-func (r *UserRepositoryImpl) Delete(id string) error {
+func (r *UserRepositoryImpl) Delete(id int64) error {
 	result := r.db.Where("id = ?", id).Delete(&entity.User{})
 	if result.Error != nil {
 		return result.Error

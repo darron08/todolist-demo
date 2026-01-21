@@ -221,7 +221,7 @@ func (uc *UserUseCase) RefreshToken(refreshToken string) (*dto.RefreshTokenRespo
 }
 
 // Logout logs out a user by invalidating their refresh token
-func (uc *UserUseCase) Logout(userID, refreshTokenID string) error {
+func (uc *UserUseCase) Logout(userID int64, refreshTokenID string) error {
 	ctx := context.Background()
 
 	// Validate that refresh token exists
@@ -243,7 +243,7 @@ func (uc *UserUseCase) Logout(userID, refreshTokenID string) error {
 }
 
 // GetProfile retrieves user profile by ID
-func (uc *UserUseCase) GetProfile(userID string) (*dto.UserResponse, error) {
+func (uc *UserUseCase) GetProfile(userID int64) (*dto.UserResponse, error) {
 	user, err := uc.userRepo.FindByID(userID)
 	if err != nil {
 		if err != nil && err.Error() == "user not found" {

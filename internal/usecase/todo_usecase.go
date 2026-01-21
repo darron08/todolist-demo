@@ -32,7 +32,7 @@ func NewTodoUseCase(todoRepo repository.TodoRepository) *TodoUseCase {
 }
 
 // CreateTodo creates a new todo
-func (uc *TodoUseCase) CreateTodo(userID string, req *dto.CreateTodoRequest) (*dto.TodoResponse, error) {
+func (uc *TodoUseCase) CreateTodo(userID int64, req *dto.CreateTodoRequest) (*dto.TodoResponse, error) {
 	// Validate title
 	if req.Title == "" {
 		return nil, ErrTodoTitleRequired
@@ -82,7 +82,7 @@ func (uc *TodoUseCase) CreateTodo(userID string, req *dto.CreateTodoRequest) (*d
 }
 
 // GetTodo retrieves a single todo by ID
-func (uc *TodoUseCase) GetTodo(id, userID string) (*dto.TodoResponse, error) {
+func (uc *TodoUseCase) GetTodo(id int64, userID int64) (*dto.TodoResponse, error) {
 	todo, err := uc.todoRepo.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (uc *TodoUseCase) GetTodo(id, userID string) (*dto.TodoResponse, error) {
 }
 
 // UpdateTodo updates an existing todo
-func (uc *TodoUseCase) UpdateTodo(id, userID string, req *dto.UpdateTodoRequest) (*dto.TodoResponse, error) {
+func (uc *TodoUseCase) UpdateTodo(id int64, userID int64, req *dto.UpdateTodoRequest) (*dto.TodoResponse, error) {
 	// Get existing todo
 	todo, err := uc.todoRepo.FindByID(id)
 	if err != nil {
@@ -168,7 +168,7 @@ func (uc *TodoUseCase) UpdateTodo(id, userID string, req *dto.UpdateTodoRequest)
 }
 
 // DeleteTodo deletes a todo
-func (uc *TodoUseCase) DeleteTodo(id, userID string) error {
+func (uc *TodoUseCase) DeleteTodo(id int64, userID int64) error {
 	// Get existing todo
 	todo, err := uc.todoRepo.FindByID(id)
 	if err != nil {
@@ -185,7 +185,7 @@ func (uc *TodoUseCase) DeleteTodo(id, userID string) error {
 }
 
 // UpdateTodoStatus updates the status of a todo
-func (uc *TodoUseCase) UpdateTodoStatus(id, userID, status string) (*dto.TodoResponse, error) {
+func (uc *TodoUseCase) UpdateTodoStatus(id int64, userID int64, status string) (*dto.TodoResponse, error) {
 	// Get existing todo
 	todo, err := uc.todoRepo.FindByID(id)
 	if err != nil {
@@ -219,7 +219,7 @@ func (uc *TodoUseCase) UpdateTodoStatus(id, userID, status string) (*dto.TodoRes
 }
 
 // ListTodos lists todos with pagination and filters
-func (uc *TodoUseCase) ListTodos(userID string, req *dto.ListTodosRequest) (*dto.TodoListResponse, error) {
+func (uc *TodoUseCase) ListTodos(userID int64, req *dto.ListTodosRequest) (*dto.TodoListResponse, error) {
 	// Set default pagination values
 	page := req.Page
 	if page < 1 {

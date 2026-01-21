@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,7 +19,7 @@ type JWTManager struct {
 
 // Claims represents JWT claims
 type Claims struct {
-	UserID    string `json:"user_id"`
+	UserID    int64  `json:"user_id"`
 	Username  string `json:"username"`
 	Role      string `json:"role"`
 	TokenID   string `json:"token_id,omitempty"`
@@ -37,19 +38,19 @@ func NewJWTManager(secret, issuer string, accessTokenExpiry, refreshTokenExpiry 
 }
 
 // GenerateAccessToken generates an access token
-func (j *JWTManager) GenerateAccessToken(userID, username, role string) (string, error) {
+func (j *JWTManager) GenerateAccessToken(userID int64, username, role string) (string, error) {
 	return j.generateToken(userID, username, role, "", "access", j.accessTokenExpiry)
 }
 
 // GenerateRefreshToken generates a refresh token
-func (j *JWTManager) GenerateRefreshToken(userID, username, role string) (string, string, error) {
+func (j *JWTManager) GenerateRefreshToken(userID int64, username, role string) (string, string, error) {
 	tokenID := uuid.New().String()
 	token, err := j.generateToken(userID, username, role, tokenID, "refresh", j.refreshTokenExpiry)
 	return token, tokenID, err
 }
 
 // generateToken generates a JWT token
-func (j *JWTManager) generateToken(userID, username, role, tokenID, tokenType string, expiry time.Duration) (string, error) {
+func (j *JWTManager) generateToken(userID int64, username, role, tokenID, tokenType string, expiry time.Duration) (string, error) {
 	now := time.Now()
 
 	claims := &Claims{
@@ -60,7 +61,7 @@ func (j *JWTManager) generateToken(userID, username, role, tokenID, tokenType st
 		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.issuer,
-			Subject:   userID,
+			Subject:   fmt.Sprintf("%d", userID),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 			NotBefore: jwt.NewNumericDate(now),
@@ -135,10 +136,10 @@ func (j *JWTManager) RefreshAccessToken(refreshTokenString string) (string, stri
 }
 
 // GetUserIDFromToken extracts user ID from token
-func (j *JWTManager) GetUserIDFromToken(tokenString string) (string, error) {
+func (j *JWTManager) GetUserIDFromToken(tokenString string) (int64, error) {
 	claims, err := j.ValidateToken(tokenString)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	return claims.UserID, nil
 }

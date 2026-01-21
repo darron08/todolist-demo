@@ -39,7 +39,7 @@ func (r *TagRepositoryImpl) Create(tag *entity.Tag) error {
 }
 
 // FindByID finds a tag by ID
-func (r *TagRepositoryImpl) FindByID(id string) (*entity.Tag, error) {
+func (r *TagRepositoryImpl) FindByID(id int64) (*entity.Tag, error) {
 	var tag entity.Tag
 	result := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&tag)
 	if result.Error != nil {
@@ -77,7 +77,7 @@ func (r *TagRepositoryImpl) Update(tag *entity.Tag) error {
 }
 
 // Delete soft deletes a tag
-func (r *TagRepositoryImpl) Delete(id string) error {
+func (r *TagRepositoryImpl) Delete(id int64) error {
 	result := r.db.Where("id = ?", id).Delete(&entity.Tag{})
 	if result.Error != nil {
 		return result.Error
@@ -104,7 +104,7 @@ func (r *TagRepositoryImpl) List(offset, limit int) ([]*entity.Tag, error) {
 }
 
 // FindByUserID finds tags associated with a user
-func (r *TagRepositoryImpl) FindByUserID(userID string) ([]*entity.Tag, error) {
+func (r *TagRepositoryImpl) FindByUserID(userID int64) ([]*entity.Tag, error) {
 	var tags []*entity.Tag
 
 	result := r.db.Table("tags").

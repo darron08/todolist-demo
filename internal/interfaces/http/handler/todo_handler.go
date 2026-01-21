@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/darron08/todolist-demo/internal/usecase"
@@ -29,20 +31,26 @@ func (h *TodoHandler) CreateTodo(c *gin.Context) {
 	}
 
 	// Get user ID from context (set by auth middleware)
-	// Get user ID from context (set by auth middleware)
-	userID := c.GetString("UserID")
-	if userID == "" {
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
 		response.Unauthorized(c, "user not authenticated")
 		return
 	}
 
-	todo, err := h.todoUseCase.CreateTodo(userID, &req)
+	// Convert user ID to int64
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
-		if err == usecase.ErrTodoTitleRequired ||
-			err == usecase.ErrTodoTitleTooLong ||
-			err == usecase.ErrTodoDescriptionTooLong ||
-			err == usecase.ErrInvalidPriority {
-			response.BadRequest(c, err.Error())
+		response.BadRequest(c, "invalid user ID")
+		return
+	}
+
+	todo, createErr := h.todoUseCase.CreateTodo(userID, &req)
+	if createErr != nil {
+		if createErr == usecase.ErrTodoTitleRequired ||
+			createErr == usecase.ErrTodoTitleTooLong ||
+			createErr == usecase.ErrTodoDescriptionTooLong ||
+			createErr == usecase.ErrInvalidPriority {
+			response.BadRequest(c, createErr.Error())
 			return
 		}
 		response.InternalServerError(c, "failed to create todo")
@@ -54,26 +62,40 @@ func (h *TodoHandler) CreateTodo(c *gin.Context) {
 
 // GetTodo handles GET /api/v1/todos/:id
 func (h *TodoHandler) GetTodo(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		response.BadRequest(c, "todo id is required")
 		return
 	}
 
-	// TODO: Remove this temporary user ID when authentication is implemented
-	userID := c.GetString("UserID")
-	if userID == "" {
-		userID = "temp-user-1"
+	// Convert id to int64
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid todo id")
+		return
 	}
 
-	todo, err := h.todoUseCase.GetTodo(id, userID)
-	if err != nil {
-		if err == usecase.ErrTodoNotFound {
-			response.NotFound(c, err.Error())
+	// TODO: Remove this temporary user ID when authentication is implemented
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
+		userIDStr = "temp-user-1"
+	}
+
+	// Convert user ID to int64
+	userID, parseErr := strconv.ParseInt(userIDStr, 10, 64)
+	if parseErr != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
+	}
+
+	todo, usecaseErr := h.todoUseCase.GetTodo(id, userID)
+	if usecaseErr != nil {
+		if usecaseErr == usecase.ErrTodoNotFound {
+			response.NotFound(c, usecaseErr.Error())
 			return
 		}
-		if err == usecase.ErrUnauthorized {
-			response.Unauthorized(c, err.Error())
+		if usecaseErr == usecase.ErrUnauthorized {
+			response.Unauthorized(c, usecaseErr.Error())
 			return
 		}
 		response.InternalServerError(c, "failed to get todo")
@@ -85,9 +107,16 @@ func (h *TodoHandler) GetTodo(c *gin.Context) {
 
 // UpdateTodo handles PUT /api/v1/todos/:id
 func (h *TodoHandler) UpdateTodo(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		response.BadRequest(c, "todo id is required")
+		return
+	}
+
+	// Convert id to int64
+	id, idErr := strconv.ParseInt(idStr, 10, 64)
+	if idErr != nil {
+		response.BadRequest(c, "invalid todo id")
 		return
 	}
 
@@ -98,27 +127,34 @@ func (h *TodoHandler) UpdateTodo(c *gin.Context) {
 	}
 
 	// TODO: Remove this temporary user ID when authentication is implemented
-	userID := c.GetString("UserID")
-	if userID == "" {
-		userID = "temp-user-1"
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
+		userIDStr = "temp-user-1"
 	}
 
-	todo, err := h.todoUseCase.UpdateTodo(id, userID, &req)
-	if err != nil {
-		if err == usecase.ErrTodoNotFound {
-			response.NotFound(c, err.Error())
+	// Convert user ID to int64
+	userID, userErr := strconv.ParseInt(userIDStr, 10, 64)
+	if userErr != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
+	}
+
+	todo, usecaseErr := h.todoUseCase.UpdateTodo(id, userID, &req)
+	if usecaseErr != nil {
+		if usecaseErr == usecase.ErrTodoNotFound {
+			response.NotFound(c, usecaseErr.Error())
 			return
 		}
-		if err == usecase.ErrUnauthorized {
-			response.Unauthorized(c, err.Error())
+		if usecaseErr == usecase.ErrUnauthorized {
+			response.Unauthorized(c, usecaseErr.Error())
 			return
 		}
-		if err == usecase.ErrTodoTitleRequired ||
-			err == usecase.ErrTodoTitleTooLong ||
-			err == usecase.ErrTodoDescriptionTooLong ||
-			err == usecase.ErrInvalidStatus ||
-			err == usecase.ErrInvalidPriority {
-			response.BadRequest(c, err.Error())
+		if usecaseErr == usecase.ErrTodoTitleRequired ||
+			usecaseErr == usecase.ErrTodoTitleTooLong ||
+			usecaseErr == usecase.ErrTodoDescriptionTooLong ||
+			usecaseErr == usecase.ErrInvalidStatus ||
+			usecaseErr == usecase.ErrInvalidPriority {
+			response.BadRequest(c, usecaseErr.Error())
 			return
 		}
 		response.InternalServerError(c, "failed to update todo")
@@ -130,16 +166,30 @@ func (h *TodoHandler) UpdateTodo(c *gin.Context) {
 
 // DeleteTodo handles DELETE /api/v1/todos/:id
 func (h *TodoHandler) DeleteTodo(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		response.BadRequest(c, "todo id is required")
 		return
 	}
 
+	// Convert id to int64
+	id, idErr := strconv.ParseInt(idStr, 10, 64)
+	if idErr != nil {
+		response.BadRequest(c, "invalid todo id")
+		return
+	}
+
 	// TODO: Remove this temporary user ID when authentication is implemented
-	userID := c.GetString("UserID")
-	if userID == "" {
-		userID = "temp-user-1"
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
+		userIDStr = "temp-user-1"
+	}
+
+	// Convert user ID to int64
+	userID, userErr := strconv.ParseInt(userIDStr, 10, 64)
+	if userErr != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
 	}
 
 	err := h.todoUseCase.DeleteTodo(id, userID)
@@ -161,9 +211,16 @@ func (h *TodoHandler) DeleteTodo(c *gin.Context) {
 
 // UpdateTodoStatus handles PATCH /api/v1/todos/:id/status
 func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		response.BadRequest(c, "todo id is required")
+		return
+	}
+
+	// Convert id to int64
+	id, idErr := strconv.ParseInt(idStr, 10, 64)
+	if idErr != nil {
+		response.BadRequest(c, "invalid todo id")
 		return
 	}
 
@@ -174,23 +231,30 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 	}
 
 	// TODO: Remove this temporary user ID when authentication is implemented
-	userID := c.GetString("UserID")
-	if userID == "" {
-		userID = "temp-user-1"
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
+		userIDStr = "temp-user-1"
 	}
 
-	todo, err := h.todoUseCase.UpdateTodoStatus(id, userID, req.Status)
-	if err != nil {
-		if err == usecase.ErrTodoNotFound {
-			response.NotFound(c, err.Error())
+	// Convert user ID to int64
+	userID, userErr := strconv.ParseInt(userIDStr, 10, 64)
+	if userErr != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
+	}
+
+	todo, usecaseErr := h.todoUseCase.UpdateTodoStatus(id, userID, req.Status)
+	if usecaseErr != nil {
+		if usecaseErr == usecase.ErrTodoNotFound {
+			response.NotFound(c, usecaseErr.Error())
 			return
 		}
-		if err == usecase.ErrUnauthorized {
-			response.Unauthorized(c, err.Error())
+		if usecaseErr == usecase.ErrUnauthorized {
+			response.Unauthorized(c, usecaseErr.Error())
 			return
 		}
-		if err == usecase.ErrInvalidStatus {
-			response.BadRequest(c, err.Error())
+		if usecaseErr == usecase.ErrInvalidStatus {
+			response.BadRequest(c, usecaseErr.Error())
 			return
 		}
 		response.InternalServerError(c, "failed to update todo status")
@@ -203,9 +267,16 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 // ListTodos handles GET /api/v1/todos
 func (h *TodoHandler) ListTodos(c *gin.Context) {
 	// TODO: Remove this temporary user ID when authentication is implemented
-	userID := c.GetString("UserID")
-	if userID == "" {
-		userID = "temp-user-1"
+	userIDStr := c.GetString("UserID")
+	if userIDStr == "" {
+		userIDStr = "temp-user-1"
+	}
+
+	// Convert user ID to int64
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid user ID")
+		return
 	}
 
 	var req dto.ListTodosRequest
@@ -214,8 +285,8 @@ func (h *TodoHandler) ListTodos(c *gin.Context) {
 		return
 	}
 
-	todos, err := h.todoUseCase.ListTodos(userID, &req)
-	if err != nil {
+	todos, usecaseErr := h.todoUseCase.ListTodos(userID, &req)
+	if usecaseErr != nil {
 		response.InternalServerError(c, "failed to list todos")
 		return
 	}

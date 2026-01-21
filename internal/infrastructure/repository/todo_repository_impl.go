@@ -30,7 +30,7 @@ func (r *TodoRepositoryImpl) Create(todo *entity.Todo) error {
 }
 
 // FindByID finds a todo by ID
-func (r *TodoRepositoryImpl) FindByID(id string) (*entity.Todo, error) {
+func (r *TodoRepositoryImpl) FindByID(id int64) (*entity.Todo, error) {
 	var todo entity.Todo
 	result := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&todo)
 	if result.Error != nil {
@@ -43,7 +43,7 @@ func (r *TodoRepositoryImpl) FindByID(id string) (*entity.Todo, error) {
 }
 
 // FindByUserID finds todos by user ID with pagination
-func (r *TodoRepositoryImpl) FindByUserID(userID string, offset, limit int) ([]*entity.Todo, error) {
+func (r *TodoRepositoryImpl) FindByUserID(userID int64, offset, limit int) ([]*entity.Todo, error) {
 	var todos []*entity.Todo
 	result := r.db.Where("user_id = ? AND deleted_at IS NULL", userID).
 		Order("created_at DESC").
@@ -70,7 +70,7 @@ func (r *TodoRepositoryImpl) Update(todo *entity.Todo) error {
 }
 
 // Delete soft deletes a todo
-func (r *TodoRepositoryImpl) Delete(id string) error {
+func (r *TodoRepositoryImpl) Delete(id int64) error {
 	result := r.db.Where("id = ?", id).Delete(&entity.Todo{})
 	if result.Error != nil {
 		return result.Error
@@ -135,7 +135,7 @@ func (r *TodoRepositoryImpl) FindByDueDate(startDate, endDate *time.Time, offset
 }
 
 // FindByUserIDAndFilters finds todos by user ID with filters
-func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID string, status *string, priority *string, offset, limit int) ([]*entity.Todo, int64, error) {
+func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string, priority *string, offset, limit int) ([]*entity.Todo, int64, error) {
 	var todos []*entity.Todo
 	var total int64
 

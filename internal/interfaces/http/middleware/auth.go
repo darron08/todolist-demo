@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -56,7 +57,7 @@ func AuthMiddleware(jwtManager *utils.JWTManager) gin.HandlerFunc {
 		}
 
 		// Set user context
-		c.Set("UserID", claims.UserID)
+		c.Set("UserID", fmt.Sprintf("%d", claims.UserID))
 		c.Set("Username", claims.Username)
 		c.Set("Role", claims.Role)
 
@@ -97,7 +98,7 @@ func OptionalAuthMiddleware(jwtManager *utils.JWTManager) gin.HandlerFunc {
 		}
 
 		// Set user context if token is valid
-		c.Set("UserID", claims.UserID)
+		c.Set("UserID", fmt.Sprintf("%d", claims.UserID))
 		c.Set("Username", claims.Username)
 		c.Set("Role", claims.Role)
 
