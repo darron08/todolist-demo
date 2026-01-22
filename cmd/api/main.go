@@ -57,7 +57,8 @@ func main() {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(databases.MySQL.GetDB())
 	todoRepo := repository.NewTodoRepository(databases.MySQL.GetDB())
-	_ = repository.NewTagRepository(databases.MySQL.GetDB())
+	tagRepo := repository.NewTagRepository(databases.MySQL.GetDB())
+	todoTagRepo := repository.NewTodoTagRepository(databases.MySQL.GetDB())
 
 	// Initialize token store
 	tokenStore := redis.NewTokenStore(databases.Redis)
@@ -69,16 +70,18 @@ func main() {
 
 	// Initialize use cases
 	userUseCase := usecase.NewUserUseCase(userRepo, jwtManager, tokenStore)
-	todoUseCase := usecase.NewTodoUseCase(todoRepo)
+	todoUseCase := usecase.NewTodoUseCase(todoRepo, tagRepo, todoTagRepo)
 	adminUseCase := usecase.NewAdminUseCase(userRepo, todoRepo)
+	tagUseCase := usecase.NewTagUseCase(tagRepo, todoTagRepo)
 
 	// Initialize handlers
 	userHandler := httpHandler.NewUserHandler(userUseCase)
 	todoHandler := httpHandler.NewTodoHandler(todoUseCase)
 	adminHandler := httpHandler.NewAdminHandler(adminUseCase)
+	tagHandler := httpHandler.NewTagHandler(tagUseCase)
 
 	// Initialize router
-	router := http.SetupRouter(cfg, jwtManager, tokenStore, userHandler, todoHandler, adminHandler)
+	router := http.SetupRouter(cfg, jwtManager, tokenStore, userHandler, todoHandler, adminHandler, tagHandler)
 
 	// Get port from environment or config
 	port := os.Getenv("PORT")

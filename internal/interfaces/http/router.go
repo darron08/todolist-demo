@@ -20,6 +20,7 @@ func SetupRouter(
 	userHandler *httpHandler.UserHandler,
 	todoHandler *httpHandler.TodoHandler,
 	adminHandler *httpHandler.AdminHandler,
+	tagHandler *httpHandler.TagHandler,
 ) *gin.Engine {
 	r := gin.New()
 
@@ -110,16 +111,19 @@ func SetupRouter(
 			admin.DELETE("/todos/:id", adminHandler.DeleteAnyTodo)
 		}
 
-		// Tag routes (TODO: implement in phase 3)
-		// tags := v1.Group("/tags")
-		// tags.Use(middleware.AuthMiddleware(jwtManager))
-		// {
-		//     tags.GET("", tagHandler.ListTags)
-		//     tags.POST("", tagHandler.CreateTag)
-		//     tags.GET("/:id", tagHandler.GetTag)
-		//     tags.PUT("/:id", tagHandler.UpdateTag)
-		//     tags.DELETE("/:id", tagHandler.DeleteTag)
-		// }
+		// Tag routes (require authentication)
+		tags := v1.Group("/tags")
+		tags.Use(middleware.AuthMiddleware(jwtManager))
+		{
+			tags.POST("", tagHandler.CreateTag)
+			tags.GET("", tagHandler.ListTags)
+			tags.GET("/:id", tagHandler.GetTag)
+			tags.PUT("/:id", tagHandler.UpdateTag)
+			tags.DELETE("/:id", tagHandler.DeleteTag)
+		}
+
+		// User tag routes
+		users.GET("/my-tags", tagHandler.GetUserTags)
 	}
 
 	// Swagger documentation (if enabled)

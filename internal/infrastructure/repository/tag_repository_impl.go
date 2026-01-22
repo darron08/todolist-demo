@@ -102,20 +102,3 @@ func (r *TagRepositoryImpl) List(offset, limit int) ([]*entity.Tag, error) {
 	}
 	return tags, nil
 }
-
-// FindByUserID finds tags associated with a user
-func (r *TagRepositoryImpl) FindByUserID(userID int64) ([]*entity.Tag, error) {
-	var tags []*entity.Tag
-
-	result := r.db.Table("tags").
-		Select("tags.*").
-		Joins("INNER JOIN user_tags ON user_tags.tag_id = tags.id").
-		Where("user_tags.user_id = ? AND tags.deleted_at IS NULL", userID).
-		Order("tags.created_at DESC").
-		Find(&tags)
-
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return tags, nil
-}

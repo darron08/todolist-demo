@@ -142,7 +142,7 @@ func autoMigrateTestDB() error {
 		&entity.User{},
 		&entity.Todo{},
 		&entity.Tag{},
-		&entity.UserTag{},
+		&entity.TodoTag{},
 	)
 }
 
@@ -151,7 +151,7 @@ func cleanTestDatabase() error {
 	gormDB := TestDB.GetDB()
 
 	// Delete all data in correct order due to foreign keys
-	gormDB.Exec("DELETE FROM user_tags")
+	gormDB.Exec("DELETE FROM todo_tags")
 	gormDB.Exec("DELETE FROM tags")
 	gormDB.Exec("DELETE FROM todos")
 	gormDB.Exec("DELETE FROM users")
@@ -181,7 +181,7 @@ func CreateTestUser(t *testing.T) *entity.User {
 }
 
 // CreateTestTodo creates a test todo in the database
-func CreateTestTodo(t *testing.T, userID string) *entity.Todo {
+func CreateTestTodo(t *testing.T, userID int64) *entity.Todo {
 	todo := &entity.Todo{
 		UserID:      userID,
 		Title:       "Test Todo",

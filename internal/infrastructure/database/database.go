@@ -96,6 +96,6 @@ func autoMigrate(db *mysql.DB) error {
 		&entity.User{},
 		&entity.Todo{},
 		&entity.Tag{},
-		&entity.UserTag{},
+		&entity.TodoTag{},
 	)
 }

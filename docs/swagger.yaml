@@ -22,6 +22,15 @@ definitions:
     - password
     - username
     type: object
+  dto.CreateTagRequest:
+    properties:
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
   dto.CreateTodoRequest:
     properties:
       description:
@@ -35,6 +44,11 @@ definitions:
         - medium
         - high
         type: string
+      tags:
+        items:
+          type: string
+        maxItems: 10
+        type: array
       title:
         maxLength: 255
         minLength: 1
@@ -116,6 +130,26 @@ definitions:
       username:
         type: string
     type: object
+  dto.TagInfo:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.TagResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      todo_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
   dto.TodoResponse:
     properties:
       created_at:
@@ -130,12 +164,25 @@ definitions:
         type: string
       status:
         type: string
+      tags:
+        items:
+          $ref: '#/definitions/dto.TagInfo'
+        type: array
       title:
         type: string
       updated_at:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.UpdateTagRequest:
+    properties:
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - name
     type: object
   dto.UpdateTodoRequest:
     properties:
@@ -156,6 +203,11 @@ definitions:
         - in_progress
         - completed
         type: string
+      tags:
+        items:
+          type: string
+        maxItems: 10
+        type: array
       title:
         maxLength: 255
         minLength: 1
@@ -654,6 +706,181 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
+  /tags:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of all tags
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tags retrieved successfully
+          schema:
+            $ref: '#/definitions/response.PaginatedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List all tags
+      tags:
+      - Tags
+    post:
+      consumes:
+      - application/json
+      description: Create a new tag
+      parameters:
+      - description: Tag details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Tag created successfully
+          schema:
+            $ref: '#/definitions/dto.TagResponse'
+        "400":
+          description: Invalid request format or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new tag
+      tags:
+      - Tags
+  /tags/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a tag by its ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tag deleted successfully
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Invalid tag ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete a tag
+      tags:
+      - Tags
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific tag by its ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tag retrieved successfully
+          schema:
+            $ref: '#/definitions/dto.TagResponse'
+        "400":
+          description: Invalid tag ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get a tag by ID
+      tags:
+      - Tags
+    put:
+      consumes:
+      - application/json
+      description: Update an existing tag by its ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated tag details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tag updated successfully
+          schema:
+            $ref: '#/definitions/dto.TagResponse'
+        "400":
+          description: Invalid request format or validation error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Tag not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update a tag
+      tags:
+      - Tags
   /todos:
     get:
       consumes:
@@ -943,6 +1170,33 @@ paths:
       summary: Update todo status
       tags:
       - Todos
+  /users/my-tags:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all tags used by the authenticated user with todo counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User tags retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/dto.TagResponse'
+            type: array
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get current user's tags
+      tags:
+      - Tags
   /users/profile:
     get:
       consumes:

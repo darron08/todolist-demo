@@ -38,5 +38,14 @@ type TagRepository interface {
 	Update(tag *entity.Tag) error
 	Delete(id int64) error
 	List(offset, limit int) ([]*entity.Tag, error)
-	FindByUserID(userID int64) ([]*entity.Tag, error)
+}
+
+// TodoTagRepository defines the interface for todo-tag relationship operations
+type TodoTagRepository interface {
+	AddTagsToTodo(todoID int64, tagIDs []int64) error
+	RemoveTagsFromTodo(todoID int64, tagIDs []int64) error
+	ReplaceTagsForTodo(todoID int64, tagIDs []int64) error
+	GetTagsByTodoID(todoID int64) ([]*entity.Tag, error)
+	GetTodosByTagID(tagID int64, offset, limit int) ([]*entity.Todo, int64, error)
+	GetTagStatsByUserID(userID int64) (map[int64]int64, error)
 }

@@ -12,6 +12,7 @@ type CreateTodoRequest struct {
 	Description string     `json:"description" binding:"max=5000"`
 	DueDate     *time.Time `json:"due_date"`
 	Priority    string     `json:"priority" binding:"omitempty,oneof=low medium high"`
+	Tags        []string   `json:"tags" binding:"omitempty,max=10"`
 }
 
 // UpdateTodoRequest represents an update todo request
@@ -21,6 +22,7 @@ type UpdateTodoRequest struct {
 	DueDate     *time.Time `json:"due_date"`
 	Status      *string    `json:"status" binding:"omitempty,oneof=not_started in_progress completed"`
 	Priority    *string    `json:"priority" binding:"omitempty,oneof=low medium high"`
+	Tags        []string   `json:"tags" binding:"omitempty,max=10"`
 }
 
 // UpdateTodoStatusRequest represents an update todo status request
@@ -50,8 +52,15 @@ type TodoResponse struct {
 	DueDate     *time.Time `json:"due_date,omitempty"`
 	Status      string     `json:"status"`
 	Priority    string     `json:"priority"`
+	Tags        []TagInfo  `json:"tags,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// TagInfo represents tag information in todo response
+type TagInfo struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // TodoListResponse represents a paginated todo list response
@@ -78,6 +87,30 @@ func ToTodoResponse(todo *entity.Todo) TodoResponse {
 	}
 }
 
+// ToTodoResponseWithTags converts entity.Todo with tags to TodoResponse
+func ToTodoResponseWithTags(todo *entity.Todo, tags []*entity.Tag) TodoResponse {
+	tagInfos := make([]TagInfo, len(tags))
+	for i, tag := range tags {
+		tagInfos[i] = TagInfo{
+			ID:   tag.ID,
+			Name: tag.Name,
+		}
+	}
+
+	return TodoResponse{
+		ID:          todo.ID,
+		UserID:      todo.UserID,
+		Title:       todo.Title,
+		Description: todo.Description,
+		DueDate:     todo.DueDate,
+		Status:      string(todo.Status),
+		Priority:    string(todo.Priority),
+		Tags:        tagInfos,
+		CreatedAt:   todo.CreatedAt,
+		UpdatedAt:   todo.UpdatedAt,
+	}
+}
+
 // ToTodoResponseList converts []entity.Todo to []TodoResponse
 func ToTodoResponseList(todos []*entity.Todo) []TodoResponse {
 	responses := make([]TodoResponse, len(todos))
@@ -85,4 +118,16 @@ func ToTodoResponseList(todos []*entity.Todo) []TodoResponse {
 		responses[i] = ToTodoResponse(todo)
 	}
 	return responses
+}
+
+// ToTagInfoList converts []*entity.Tag to []TagInfo
+func ToTagInfoList(tags []*entity.Tag) []TagInfo {
+	tagInfos := make([]TagInfo, len(tags))
+	for i, tag := range tags {
+		tagInfos[i] = TagInfo{
+			ID:   tag.ID,
+			Name: tag.Name,
+		}
+	}
+	return tagInfos
 }

@@ -16,18 +16,23 @@ var (
 	ErrInvalidStatus          = errors.New("invalid status")
 	ErrInvalidPriority        = errors.New("invalid priority")
 	ErrTodoNotFound           = errors.New("todo not found")
+	ErrTagNotFound            = errors.New("tag not found")
 	ErrUnauthorized           = errors.New("unauthorized")
 )
 
 // TodoUseCase implements business logic for todos
 type TodoUseCase struct {
-	todoRepo repository.TodoRepository
+	todoRepo    repository.TodoRepository
+	tagRepo     repository.TagRepository
+	todoTagRepo repository.TodoTagRepository
 }
 
 // NewTodoUseCase creates a new todo use case
-func NewTodoUseCase(todoRepo repository.TodoRepository) *TodoUseCase {
+func NewTodoUseCase(todoRepo repository.TodoRepository, tagRepo repository.TagRepository, todoTagRepo repository.TodoTagRepository) *TodoUseCase {
 	return &TodoUseCase{
-		todoRepo: todoRepo,
+		todoRepo:    todoRepo,
+		tagRepo:     tagRepo,
+		todoTagRepo: todoTagRepo,
 	}
 }
 
@@ -76,8 +81,36 @@ func (uc *TodoUseCase) CreateTodo(userID int64, req *dto.CreateTodoRequest) (*dt
 		return nil, err
 	}
 
+	// Handle tags if provided
+	if len(req.Tags) > 0 {
+		var tagIDs []int64
+		for _, tagName := range req.Tags {
+			tag, err := uc.tagRepo.FindByName(tagName)
+			if err != nil {
+				if err == ErrTagNotFound {
+					// Create new tag
+					newTag := &entity.Tag{Name: tagName}
+					if err := uc.tagRepo.Create(newTag); err != nil {
+						return nil, err
+					}
+					tagIDs = append(tagIDs, newTag.ID)
+				} else {
+					return nil, err
+				}
+			} else {
+				tagIDs = append(tagIDs, tag.ID)
+			}
+		}
+		if err := uc.todoTagRepo.AddTagsToTodo(todo.ID, tagIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	// Get tags for response
+	tags, _ := uc.todoTagRepo.GetTagsByTodoID(todo.ID)
+
 	// Convert to response
-	response := dto.ToTodoResponse(todo)
+	response := dto.ToTodoResponseWithTags(todo, tags)
 	return &response, nil
 }
 
@@ -93,7 +126,10 @@ func (uc *TodoUseCase) GetTodo(id int64, userID int64) (*dto.TodoResponse, error
 		return nil, ErrUnauthorized
 	}
 
-	response := dto.ToTodoResponse(todo)
+	// Get tags for todo
+	tags, _ := uc.todoTagRepo.GetTagsByTodoID(todo.ID)
+
+	response := dto.ToTodoResponseWithTags(todo, tags)
 	return &response, nil
 }
 
@@ -163,7 +199,35 @@ func (uc *TodoUseCase) UpdateTodo(id int64, userID int64, req *dto.UpdateTodoReq
 		return nil, err
 	}
 
-	response := dto.ToTodoResponse(todo)
+	// Handle tags if provided
+	if req.Tags != nil {
+		var tagIDs []int64
+		for _, tagName := range req.Tags {
+			tag, err := uc.tagRepo.FindByName(tagName)
+			if err != nil {
+				if err == ErrTagNotFound {
+					// Create new tag
+					newTag := &entity.Tag{Name: tagName}
+					if err := uc.tagRepo.Create(newTag); err != nil {
+						return nil, err
+					}
+					tagIDs = append(tagIDs, newTag.ID)
+				} else {
+					return nil, err
+				}
+			} else {
+				tagIDs = append(tagIDs, tag.ID)
+			}
+		}
+		if err := uc.todoTagRepo.ReplaceTagsForTodo(todo.ID, tagIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	// Get tags for response
+	tags, _ := uc.todoTagRepo.GetTagsByTodoID(todo.ID)
+
+	response := dto.ToTodoResponseWithTags(todo, tags)
 	return &response, nil
 }
 

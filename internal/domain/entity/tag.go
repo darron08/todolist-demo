@@ -13,8 +13,9 @@ type Tag struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"`
 }
 
-type UserTag struct {
-	UserID    int64     `json:"user_id" gorm:"type:bigint;not null;primaryKey"`
+// TodoTag represents the many-to-many relationship between todos and tags
+type TodoTag struct {
+	TodoID    int64     `json:"todo_id" gorm:"type:bigint;not null;primaryKey"`
 	TagID     int64     `json:"tag_id" gorm:"type:bigint;not null;primaryKey"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
@@ -25,6 +26,6 @@ func (Tag) TableName() string {
 }
 
 // TableName returns the table name for GORM
-func (UserTag) TableName() string {
-	return "user_tags"
+func (TodoTag) TableName() string {
+	return "todo_tags"
 }
