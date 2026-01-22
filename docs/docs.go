@@ -651,7 +651,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Retrieve a paginated list of todos for the authenticated user with optional filters",
+                "description": "Retrieve a paginated list of todos for the authenticated user with optional filters and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -721,6 +721,29 @@ const docTemplate = `{
                         "format": "date-time",
                         "description": "Filter todos due before this date (RFC3339 format)",
                         "name": "due_date_to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "due_date",
+                            "status",
+                            "title"
+                        ],
+                        "type": "string",
+                        "default": "due_date",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     }
                 ],

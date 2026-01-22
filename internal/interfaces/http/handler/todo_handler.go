@@ -332,7 +332,7 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 
 // ListTodos handles GET /api/v1/todos
 // @Summary List todos
-// @Description Retrieve a paginated list of todos for the authenticated user with optional filters
+// @Description Retrieve a paginated list of todos for the authenticated user with optional filters and sorting
 // @Tags Todos
 // @Accept json
 // @Produce json
@@ -344,6 +344,8 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 // @Param search query string false "Search in title and description" maxlength(100)
 // @Param due_date_from query string false "Filter todos due after this date (RFC3339 format)" format(date-time)
 // @Param due_date_to query string false "Filter todos due before this date (RFC3339 format)" format(date-time)
+// @Param sort_by query string false "Sort field" Enums(due_date, status, title) default(due_date)
+// @Param sort_order query string false "Sort order" Enums(asc, desc) default(asc)
 // @Success 200 {object} response.PaginatedResponse "Todos retrieved successfully"
 // @Failure 400 {object} response.ErrorResponse "Invalid user ID or request format"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"

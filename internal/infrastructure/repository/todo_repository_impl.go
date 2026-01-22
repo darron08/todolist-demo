@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -135,7 +136,7 @@ func (r *TodoRepositoryImpl) FindByDueDate(startDate, endDate *time.Time, offset
 }
 
 // FindByUserIDAndFilters finds todos by user ID with filters
-func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string, priority *string, dueDateFrom, dueDateTo *time.Time, offset, limit int) ([]*entity.Todo, int64, error) {
+func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string, priority *string, dueDateFrom, dueDateTo *time.Time, sortBy, sortOrder string, offset, limit int) ([]*entity.Todo, int64, error) {
 	var todos []*entity.Todo
 	var total int64
 
@@ -159,8 +160,24 @@ func (r *TodoRepositoryImpl) FindByUserIDAndFilters(userID int64, status *string
 		return nil, 0, err
 	}
 
-	// Get paginated results
-	result := query.Order("created_at DESC").
+	// Map sort_by to database column names
+	var orderByColumn string
+	switch sortBy {
+	case "due_date":
+		orderByColumn = "due_date"
+	case "status":
+		orderByColumn = "status"
+	case "title":
+		orderByColumn = "title"
+	default:
+		orderByColumn = "due_date"
+	}
+
+	// Build order by clause with direction
+	orderClause := fmt.Sprintf("%s %s", orderByColumn, sortOrder)
+
+	// Get paginated results with dynamic sorting
+	result := query.Order(orderClause).
 		Limit(limit).
 		Offset(offset).
 		Find(&todos)

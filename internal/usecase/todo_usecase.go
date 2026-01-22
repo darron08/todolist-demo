@@ -233,6 +233,17 @@ func (uc *TodoUseCase) ListTodos(userID int64, req *dto.ListTodosRequest) (*dto.
 
 	offset := (page - 1) * limit
 
+	// Set default sort values
+	sortBy := req.SortBy
+	if sortBy == "" {
+		sortBy = "due_date"
+	}
+
+	sortOrder := req.SortOrder
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+
 	// Prepare filters
 	var statusFilter *string
 	if req.Status != "" {
@@ -245,7 +256,7 @@ func (uc *TodoUseCase) ListTodos(userID int64, req *dto.ListTodosRequest) (*dto.
 	}
 
 	// Get todos with filters
-	todos, total, err := uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, req.DueDateFrom, req.DueDateTo, offset, limit)
+	todos, total, err := uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, req.DueDateFrom, req.DueDateTo, sortBy, sortOrder, offset, limit)
 	if err != nil {
 		return nil, err
 	}

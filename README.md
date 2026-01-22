@@ -7,7 +7,7 @@ A high-performance, scalable todo list microservice built with Go and Clean Arch
 - User authentication with JWT
 - Todo CRUD operations
 - Real-time collaboration
-- Containerized deployment
+- Containerized deployment (Docker & Docker Compose)
 
 ## Tech Stack
 

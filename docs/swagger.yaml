@@ -659,7 +659,7 @@ paths:
       consumes:
       - application/json
       description: Retrieve a paginated list of todos for the authenticated user with
-        optional filters
+        optional filters and sorting
       parameters:
       - default: 1
         description: Page number
@@ -704,6 +704,23 @@ paths:
         format: date-time
         in: query
         name: due_date_to
+        type: string
+      - default: due_date
+        description: Sort field
+        enum:
+        - due_date
+        - status
+        - title
+        in: query
+        name: sort_by
+        type: string
+      - default: asc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       produces:
       - application/json

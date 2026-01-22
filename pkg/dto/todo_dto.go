@@ -37,6 +37,8 @@ type ListTodosRequest struct {
 	Search      string     `form:"search" binding:"max=100"`
 	DueDateFrom *time.Time `form:"due_date_from" binding:"omitempty"`
 	DueDateTo   *time.Time `form:"due_date_to" binding:"omitempty"`
+	SortBy      string     `form:"sort_by" binding:"omitempty,oneof=due_date status title"`
+	SortOrder   string     `form:"sort_order" binding:"omitempty,oneof=asc desc"`
 }
 
 // TodoResponse represents a todo response
