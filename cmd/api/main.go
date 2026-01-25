@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/darron08/todolist-demo/internal/infrastructure/cache"
 	"github.com/darron08/todolist-demo/internal/infrastructure/config"
 	"github.com/darron08/todolist-demo/internal/infrastructure/database"
 	"github.com/darron08/todolist-demo/internal/infrastructure/redis"
@@ -63,6 +64,20 @@ func main() {
 	// Initialize token store
 	tokenStore := redis.NewTokenStore(databases.Redis)
 
+	// Initialize cache layers
+	todoCache := cache.NewTodoCache(
+		databases.Redis,
+		todoRepo,
+		time.Duration(cfg.Cache.Todo.HashTTL)*time.Second,
+		time.Duration(cfg.Cache.Todo.SortedSetTTL)*time.Second,
+		time.Duration(cfg.Cache.Todo.QueryTTL)*time.Second,
+	)
+	tagCache := cache.NewTagCache(
+		databases.Redis,
+		tagRepo,
+		time.Duration(cfg.Cache.Tag.TTL)*time.Second,
+	)
+
 	// Initialize JWT manager
 	accessTokenExpiry := 15 * time.Minute
 	refreshTokenExpiry := 7 * 24 * time.Hour
@@ -70,9 +85,9 @@ func main() {
 
 	// Initialize use cases
 	userUseCase := usecase.NewUserUseCase(userRepo, jwtManager, tokenStore)
-	todoUseCase := usecase.NewTodoUseCase(todoRepo, tagRepo, todoTagRepo)
+	todoUseCase := usecase.NewTodoUseCase(todoRepo, tagRepo, todoTagRepo, todoCache)
 	adminUseCase := usecase.NewAdminUseCase(userRepo, todoRepo)
-	tagUseCase := usecase.NewTagUseCase(tagRepo, todoTagRepo)
+	tagUseCase := usecase.NewTagUseCase(tagRepo, todoTagRepo, tagCache)
 
 	// Initialize handlers
 	userHandler := httpHandler.NewUserHandler(userUseCase)

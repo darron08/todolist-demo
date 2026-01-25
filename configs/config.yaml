@@ -76,3 +76,12 @@ swagger:
 
 rate_limit:
   enabled: false  # Disabled in development
+
+cache:
+  todo:
+    hash_ttl: 3600s       # 1 hour
+    sorted_set_ttl: 600s   # 10 minutes
+    query_ttl: 300s        # 5 minutes
+  tag:
+    ttl: 1800s             # 30 minutes
+  lock_timeout: 10s        # 10 seconds

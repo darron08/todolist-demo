@@ -60,3 +60,5 @@ coverage.html
 # Build artifacts
 dist/
 build/
+# Build artifacts
+bin/

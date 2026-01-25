@@ -1,11 +1,13 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"math"
 
 	"github.com/darron08/todolist-demo/internal/domain/entity"
 	"github.com/darron08/todolist-demo/internal/domain/repository"
+	"github.com/darron08/todolist-demo/internal/infrastructure/cache"
 	"github.com/darron08/todolist-demo/pkg/dto"
 )
 
@@ -18,13 +20,15 @@ var (
 type TagUseCase struct {
 	tagRepo     repository.TagRepository
 	todoTagRepo repository.TodoTagRepository
+	tagCache    *cache.TagCache
 }
 
 // NewTagUseCase creates a new tag use case
-func NewTagUseCase(tagRepo repository.TagRepository, todoTagRepo repository.TodoTagRepository) *TagUseCase {
+func NewTagUseCase(tagRepo repository.TagRepository, todoTagRepo repository.TodoTagRepository, tagCache *cache.TagCache) *TagUseCase {
 	return &TagUseCase{
 		tagRepo:     tagRepo,
 		todoTagRepo: todoTagRepo,
+		tagCache:    tagCache,
 	}
 }
 
@@ -54,13 +58,30 @@ func (uc *TagUseCase) CreateTag(req *dto.CreateTagRequest) (*dto.TagResponse, er
 		return nil, err
 	}
 
+	// Update cache
+	if uc.tagCache != nil {
+		if err := uc.tagCache.CreateTag(context.Background(), tag); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
 	response := dto.ToTagResponse(tag)
 	return &response, nil
 }
 
 // GetTag retrieves a single tag by ID
 func (uc *TagUseCase) GetTag(id int64) (*dto.TagResponse, error) {
-	tag, err := uc.tagRepo.FindByID(id)
+	var tag *entity.Tag
+	var err error
+
+	// Try to get from cache first
+	if uc.tagCache != nil {
+		tag, err = uc.tagCache.GetTag(context.Background(), id)
+	} else {
+		tag, err = uc.tagRepo.FindByID(id)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -99,13 +120,33 @@ func (uc *TagUseCase) UpdateTag(id int64, req *dto.UpdateTagRequest) (*dto.TagRe
 		return nil, err
 	}
 
+	// Update cache
+	if uc.tagCache != nil {
+		if err := uc.tagCache.UpdateTag(context.Background(), tag); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
 	response := dto.ToTagResponse(tag)
 	return &response, nil
 }
 
 // DeleteTag deletes a tag
 func (uc *TagUseCase) DeleteTag(id int64) error {
-	return uc.tagRepo.Delete(id)
+	if err := uc.tagRepo.Delete(id); err != nil {
+		return err
+	}
+
+	// Delete from cache
+	if uc.tagCache != nil {
+		if err := uc.tagCache.DeleteTag(context.Background(), id); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
+	return nil
 }
 
 // ListTags lists all tags with pagination
@@ -120,18 +161,29 @@ func (uc *TagUseCase) ListTags(page, limit int) (*dto.TagListResponse, error) {
 
 	offset := (page - 1) * limit
 
-	// Get tags
-	tags, err := uc.tagRepo.List(offset, limit)
-	if err != nil {
-		return nil, err
+	// Get tags (with cache support)
+	var tags []*entity.Tag
+	var total int64
+	var err error
+
+	if uc.tagCache != nil {
+		tags, total, err = uc.tagCache.GetTagList(context.Background(), page, limit)
+	} else {
+		tags, err = uc.tagRepo.List(offset, limit)
+		if err != nil {
+			return nil, err
+		}
+		// Get all tags for counting total
+		allTags, err := uc.tagRepo.List(0, 10000)
+		if err != nil {
+			return nil, err
+		}
+		total = int64(len(allTags))
 	}
 
-	// Get all tags for counting total
-	allTags, err := uc.tagRepo.List(0, 10000)
 	if err != nil {
 		return nil, err
 	}
-	total := int64(len(allTags))
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))

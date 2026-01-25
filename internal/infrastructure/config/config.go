@@ -17,6 +17,7 @@ type Config struct {
 	CORS      CORSConfig      `mapstructure:"cors"`
 	Swagger   SwaggerConfig   `mapstructure:"swagger"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Cache     CacheConfig     `mapstructure:"cache"`
 }
 
 // ServerConfig represents HTTP server configuration
@@ -105,6 +106,25 @@ type RateLimitConfig struct {
 	Enabled           bool `mapstructure:"enabled"`
 	RequestsPerMinute int  `mapstructure:"requests_per_minute"`
 	Burst             int  `mapstructure:"burst"`
+}
+
+// CacheConfig represents cache configuration
+type CacheConfig struct {
+	Todo        CacheTodoConfig `mapstructure:"todo"`
+	Tag         CacheTagConfig  `mapstructure:"tag"`
+	LockTimeout int             `mapstructure:"lock_timeout"`
+}
+
+// CacheTodoConfig represents todo cache configuration
+type CacheTodoConfig struct {
+	HashTTL      int `mapstructure:"hash_ttl"`
+	SortedSetTTL int `mapstructure:"sorted_set_ttl"`
+	QueryTTL     int `mapstructure:"query_ttl"`
+}
+
+// CacheTagConfig represents tag cache configuration
+type CacheTagConfig struct {
+	TTL int `mapstructure:"ttl"`
 }
 
 // Load loads configuration from file and environment variables
@@ -200,6 +220,13 @@ func setDefaults() {
 	viper.SetDefault("rate_limit.enabled", true)
 	viper.SetDefault("rate_limit.requests_per_minute", 100)
 	viper.SetDefault("rate_limit.burst", 200)
+
+	// Cache defaults
+	viper.SetDefault("cache.todo.hash_ttl", 3600)
+	viper.SetDefault("cache.todo.sorted_set_ttl", 600)
+	viper.SetDefault("cache.todo.query_ttl", 300)
+	viper.SetDefault("cache.tag.ttl", 1800)
+	viper.SetDefault("cache.lock_timeout", 10)
 }
 
 // overrideWithEnv overrides configuration with environment variables

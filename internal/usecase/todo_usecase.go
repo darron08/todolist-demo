@@ -1,11 +1,13 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"math"
 
 	"github.com/darron08/todolist-demo/internal/domain/entity"
 	"github.com/darron08/todolist-demo/internal/domain/repository"
+	"github.com/darron08/todolist-demo/internal/infrastructure/cache"
 	"github.com/darron08/todolist-demo/pkg/dto"
 )
 
@@ -25,14 +27,16 @@ type TodoUseCase struct {
 	todoRepo    repository.TodoRepository
 	tagRepo     repository.TagRepository
 	todoTagRepo repository.TodoTagRepository
+	todoCache   *cache.TodoCache
 }
 
 // NewTodoUseCase creates a new todo use case
-func NewTodoUseCase(todoRepo repository.TodoRepository, tagRepo repository.TagRepository, todoTagRepo repository.TodoTagRepository) *TodoUseCase {
+func NewTodoUseCase(todoRepo repository.TodoRepository, tagRepo repository.TagRepository, todoTagRepo repository.TodoTagRepository, todoCache *cache.TodoCache) *TodoUseCase {
 	return &TodoUseCase{
 		todoRepo:    todoRepo,
 		tagRepo:     tagRepo,
 		todoTagRepo: todoTagRepo,
+		todoCache:   todoCache,
 	}
 }
 
@@ -81,6 +85,14 @@ func (uc *TodoUseCase) CreateTodo(userID int64, req *dto.CreateTodoRequest) (*dt
 		return nil, err
 	}
 
+	// Update cache
+	if uc.todoCache != nil {
+		if err := uc.todoCache.CreateTodo(context.Background(), todo); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
 	// Handle tags if provided
 	if len(req.Tags) > 0 {
 		var tagIDs []int64
@@ -116,7 +128,16 @@ func (uc *TodoUseCase) CreateTodo(userID int64, req *dto.CreateTodoRequest) (*dt
 
 // GetTodo retrieves a single todo by ID
 func (uc *TodoUseCase) GetTodo(id int64, userID int64) (*dto.TodoResponse, error) {
-	todo, err := uc.todoRepo.FindByID(id)
+	var todo *entity.Todo
+	var err error
+
+	// Try to get from cache first
+	if uc.todoCache != nil {
+		todo, err = uc.todoCache.GetTodo(context.Background(), id)
+	} else {
+		todo, err = uc.todoRepo.FindByID(id)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +220,14 @@ func (uc *TodoUseCase) UpdateTodo(id int64, userID int64, req *dto.UpdateTodoReq
 		return nil, err
 	}
 
+	// Update cache
+	if uc.todoCache != nil {
+		if err := uc.todoCache.UpdateTodo(context.Background(), todo); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
 	// Handle tags if provided
 	if req.Tags != nil {
 		var tagIDs []int64
@@ -245,7 +274,19 @@ func (uc *TodoUseCase) DeleteTodo(id int64, userID int64) error {
 	}
 
 	// Delete todo
-	return uc.todoRepo.Delete(id)
+	if err := uc.todoRepo.Delete(id); err != nil {
+		return err
+	}
+
+	// Delete from cache
+	if uc.todoCache != nil {
+		if err := uc.todoCache.DeleteTodo(context.Background(), id, userID); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
+	}
+
+	return nil
 }
 
 // UpdateTodoStatus updates the status of a todo
@@ -276,6 +317,14 @@ func (uc *TodoUseCase) UpdateTodoStatus(id int64, userID int64, status string) (
 	// Save changes
 	if err := uc.todoRepo.Update(todo); err != nil {
 		return nil, err
+	}
+
+	// Update cache
+	if uc.todoCache != nil {
+		if err := uc.todoCache.UpdateTodoStatus(context.Background(), id, userID, status); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+		}
 	}
 
 	response := dto.ToTodoResponse(todo)
@@ -319,8 +368,26 @@ func (uc *TodoUseCase) ListTodos(userID int64, req *dto.ListTodosRequest) (*dto.
 		priorityFilter = &req.Priority
 	}
 
-	// Get todos with filters
-	todos, total, err := uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, req.DueDateFrom, req.DueDateTo, sortBy, sortOrder, offset, limit)
+	// Get todos with filters (with cache support)
+	var todos []*entity.Todo
+	var total int64
+	var err error
+
+	if uc.todoCache != nil {
+		// Use cache if available
+		filters := &cache.ListFilter{
+			Status:      statusFilter,
+			Priority:    priorityFilter,
+			DueDateFrom: req.DueDateFrom,
+			DueDateTo:   req.DueDateTo,
+			Search:      req.Search,
+		}
+		todos, total, err = uc.todoCache.GetTodoList(context.Background(), userID, filters, sortBy, sortOrder, page, limit)
+	} else {
+		// Fallback to database query
+		todos, total, err = uc.todoRepo.FindByUserIDAndFilters(userID, statusFilter, priorityFilter, req.DueDateFrom, req.DueDateTo, sortBy, sortOrder, offset, limit)
+	}
+
 	if err != nil {
 		return nil, err
 	}
