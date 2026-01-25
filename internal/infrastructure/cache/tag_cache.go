@@ -10,6 +10,7 @@ import (
 	"github.com/darron08/todolist-demo/internal/domain/entity"
 	"github.com/darron08/todolist-demo/internal/domain/repository"
 	"github.com/darron08/todolist-demo/internal/infrastructure/database/redis"
+	"golang.org/x/sync/singleflight"
 )
 
 // TagCache manages caching for tags using String
@@ -17,6 +18,11 @@ type TagCache struct {
 	redisClient *redis.Client
 	tagRepo     repository.TagRepository
 	lockManager *LockManager
+
+	// Singleflight groups
+	tagFlight      singleflight.Group
+	tagListFlight  singleflight.Group
+	userTagsFlight singleflight.Group
 
 	// TTL configurations
 	tagTTL         time.Duration
@@ -72,16 +78,25 @@ func (tc *TagCache) GetTag(ctx context.Context, tagID int64) (*entity.Tag, error
 		}
 	}
 
-	// 2. Cache miss, get from database
-	tagResult, err := tc.tagRepo.FindByID(tagID)
+	// 2. Use singleflight to prevent thundering herd
+	result, err, _ := tc.tagFlight.Do(fmt.Sprintf("get-tag:%d", tagID), func() (interface{}, error) {
+		// Cache miss, get from database
+		tagResult, err := tc.tagRepo.FindByID(tagID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update cache (synchronous)
+		_ = tc.updateTagCache(ctx, tagResult)
+
+		return tagResult, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Update cache (fire and forget)
-	go tc.updateTagCache(context.Background(), tagResult)
-
-	return tagResult, nil
+	return result.(*entity.Tag), nil
 }
 
 // GetTagList retrieves a paginated list of tags from string cache or database
@@ -100,35 +115,50 @@ func (tc *TagCache) GetTagList(ctx context.Context, page, limit int) ([]*entity.
 		}
 	}
 
-	// 2. Cache miss, query database
-	offset := (page - 1) * limit
-	tags, err := tc.tagRepo.List(offset, limit)
+	// 2. Use singleflight to prevent thundering herd
+	result, err, _ := tc.tagListFlight.Do(fmt.Sprintf("taglist:%d:%d", page, limit), func() (interface{}, error) {
+		// Cache miss, query database
+		offset := (page - 1) * limit
+		tags, err := tc.tagRepo.List(offset, limit)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get total count
+		allTags, err := tc.tagRepo.List(0, 10000)
+		if err != nil {
+			return nil, err
+		}
+		total := int64(len(allTags))
+
+		// Cache result (synchronous)
+		response := struct {
+			Data  []*entity.Tag `json:"data"`
+			Total int64         `json:"total"`
+		}{
+			Data:  tags,
+			Total: total,
+		}
+
+		jsonBytes, err := json.Marshal(response)
+		if err == nil {
+			_ = tc.redisClient.Set(ctx, cacheKey, string(jsonBytes), tc.tagTTL)
+		}
+
+		return &tagListResult{tags, total}, nil
+	})
+
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Get total count
-	allTags, err := tc.tagRepo.List(0, 10000)
-	if err != nil {
-		return nil, 0, err
-	}
-	total := int64(len(allTags))
+	r := result.(*tagListResult)
+	return r.tags, r.total, nil
+}
 
-	// 3. Cache result
-	response := struct {
-		Data  []*entity.Tag `json:"data"`
-		Total int64         `json:"total"`
-	}{
-		Data:  tags,
-		Total: total,
-	}
-
-	jsonBytes, err := json.Marshal(response)
-	if err == nil {
-		go tc.redisClient.Set(context.Background(), cacheKey, string(jsonBytes), tc.tagTTL)
-	}
-
-	return tags, total, nil
+type tagListResult struct {
+	tags  []*entity.Tag
+	total int64
 }
 
 // GetUserTags retrieves user tags with todo counts from string cache or database
@@ -144,23 +174,28 @@ func (tc *TagCache) GetUserTags(ctx context.Context, userID int64) ([]*entity.Ta
 		}
 	}
 
-	// 2. Cache miss, query database (this method might need to be implemented in repository)
-	// For now, we'll implement it using existing methods
-	allTags, err := tc.tagRepo.List(0, 10000)
+	// 2. Use singleflight to prevent thundering herd
+	result, err, _ := tc.userTagsFlight.Do(fmt.Sprintf("usertags:%d", userID), func() (interface{}, error) {
+		// Cache miss, query database
+		allTags, err := tc.tagRepo.List(0, 10000)
+		if err != nil {
+			return nil, err
+		}
+
+		// Cache result (synchronous)
+		jsonBytes, err := json.Marshal(allTags)
+		if err == nil {
+			_ = tc.redisClient.Set(ctx, cacheKey, string(jsonBytes), tc.tagTTL)
+		}
+
+		return allTags, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Note: The todo count logic is handled in the use case layer
-	// Here we just return the tags
-
-	// 3. Cache result
-	jsonBytes, err := json.Marshal(allTags)
-	if err == nil {
-		go tc.redisClient.Set(context.Background(), cacheKey, string(jsonBytes), tc.tagTTL)
-	}
-
-	return allTags, nil
+	return result.([]*entity.Tag), nil
 }
 
 // Helper methods

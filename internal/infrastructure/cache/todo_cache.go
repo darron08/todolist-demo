@@ -11,6 +11,7 @@ import (
 	"github.com/darron08/todolist-demo/internal/domain/repository"
 	"github.com/darron08/todolist-demo/internal/infrastructure/database/redis"
 	redisv8 "github.com/go-redis/redis/v8"
+	"golang.org/x/sync/singleflight"
 )
 
 // TodoCache manages caching for todos using Sorted Set + Hash
@@ -18,6 +19,11 @@ type TodoCache struct {
 	redisClient *redis.Client
 	todoRepo    repository.TodoRepository
 	lockManager *LockManager
+
+	// Singleflight groups
+	todoFlight             singleflight.Group
+	todoListFlight         singleflight.Group
+	rebuildSortedSetFlight singleflight.Group
 
 	// TTL configurations
 	hashTTL        time.Duration
@@ -213,16 +219,25 @@ func (tc *TodoCache) GetTodo(ctx context.Context, todoID int64) (*entity.Todo, e
 		}
 	}
 
-	// 2. Cache miss, get from database
-	todo, err := tc.todoRepo.FindByID(todoID)
+	// 2. Use singleflight to prevent thundering herd
+	result, err, _ := tc.todoFlight.Do(fmt.Sprintf("get-todo:%d", todoID), func() (interface{}, error) {
+		// Cache miss, get from database
+		todo, err := tc.todoRepo.FindByID(todoID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update cache (synchronous)
+		_ = tc.updateHashCache(ctx, todo)
+
+		return todo, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Update cache (fire and forget)
-	go tc.updateHashCache(context.Background(), todo)
-
-	return todo, nil
+	return result.(*entity.Todo), nil
 }
 
 // GetTodoList retrieves a paginated list of todos using sorted set or query cache
@@ -245,44 +260,54 @@ func (tc *TodoCache) getTodoListFromSortedSet(ctx context.Context, userID int64,
 	// Build sorted set key
 	sortedSetKey := BuildSortedSetKey(userID, filters, sortBy, sortOrder)
 
-	// Check if sorted set exists
-	exists, err := tc.redisClient.Exists(ctx, sortedSetKey)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Rebuild sorted set if it doesn't exist (lazy loading)
-	if exists == 0 {
-		err = tc.rebuildSortedSet(ctx, userID, filters, sortBy, sortOrder)
+	// Use singleflight to prevent concurrent rebuild
+	result, err, _ := tc.todoListFlight.Do(sortedSetKey, func() (interface{}, error) {
+		// Check if sorted set exists
+		exists, err := tc.redisClient.Exists(ctx, sortedSetKey)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
-	}
 
-	// Get IDs from sorted set with pagination
-	start := int64(offset)
-	stop := int64(offset + limit - 1)
-	ids, err := tc.redisClient.ZRangeByID(ctx, sortedSetKey, start, stop)
+		// Rebuild sorted set if it doesn't exist (lazy loading)
+		if exists == 0 {
+			_, _, err = tc.rebuildSortedSetWithFlight(ctx, userID, filters, sortBy, sortOrder)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Get IDs from sorted set with pagination
+		start := int64(offset)
+		stop := int64(offset + limit - 1)
+		ids, err := tc.redisClient.ZRangeByID(ctx, sortedSetKey, start, stop)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get total count
+		total, err := tc.redisClient.ZCard(ctx, sortedSetKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// Batch get todos from hash or database
+		todos := make([]*entity.Todo, 0, len(ids))
+		for _, id := range ids {
+			todo, err := tc.getTodoFromCacheOrDB(ctx, id)
+			if err == nil {
+				todos = append(todos, todo)
+			}
+		}
+
+		return &todoListResult{todos, total}, nil
+	})
+
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Get total count
-	total, err := tc.redisClient.ZCard(ctx, sortedSetKey)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Batch get todos from hash or database
-	todos := make([]*entity.Todo, 0, len(ids))
-	for _, id := range ids {
-		todo, err := tc.getTodoFromCacheOrDB(ctx, id)
-		if err == nil {
-			todos = append(todos, todo)
-		}
-	}
-
-	return todos, total, nil
+	r := result.(*todoListResult)
+	return r.todos, r.total, nil
 }
 
 // getTodoListFromQueryCache retrieves todos using query cache (for complex queries)
@@ -302,42 +327,111 @@ func (tc *TodoCache) getTodoListFromQueryCache(ctx context.Context, userID int64
 		}
 	}
 
-	// Cache miss, query database
-	offset := (page - 1) * limit
-	todos, total, err := tc.todoRepo.FindByUserIDAndFilters(
-		userID,
-		filters.Status,
-		filters.Priority,
-		filters.DueDateFrom,
-		filters.DueDateTo,
-		sortBy,
-		sortOrder,
-		offset,
-		limit,
-	)
+	// Use singleflight to prevent thundering herd
+	result, err, _ := tc.todoListFlight.Do(cacheKey, func() (interface{}, error) {
+		// Cache miss, query database
+		offset := (page - 1) * limit
+		todos, total, err := tc.todoRepo.FindByUserIDAndFilters(
+			userID,
+			filters.Status,
+			filters.Priority,
+			filters.DueDateFrom,
+			filters.DueDateTo,
+			sortBy,
+			sortOrder,
+			offset,
+			limit,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Cache result (synchronous)
+		response := struct {
+			Data  []*entity.Todo `json:"data"`
+			Total int64          `json:"total"`
+		}{
+			Data:  todos,
+			Total: total,
+		}
+
+		jsonBytes, err := json.Marshal(response)
+		if err == nil {
+			_ = tc.redisClient.Set(ctx, cacheKey, string(jsonBytes), tc.queryCacheTTL)
+		}
+
+		return &todoListResult{todos, total}, nil
+	})
 
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Cache result
-	response := struct {
-		Data  []*entity.Todo `json:"data"`
-		Total int64          `json:"total"`
-	}{
-		Data:  todos,
-		Total: total,
-	}
-
-	jsonBytes, err := json.Marshal(response)
-	if err == nil {
-		go tc.redisClient.Set(context.Background(), cacheKey, string(jsonBytes), tc.queryCacheTTL)
-	}
-
-	return todos, total, nil
+	r := result.(*todoListResult)
+	return r.todos, r.total, nil
 }
 
 // Helper methods
+
+type todoListResult struct {
+	todos []*entity.Todo
+	total int64
+}
+
+// rebuildSortedSetWithFlight rebuilds a single sorted set from database with singleflight
+func (tc *TodoCache) rebuildSortedSetWithFlight(ctx context.Context, userID int64, filters *ListFilter, sortBy, sortOrder string) ([]*entity.Todo, int64, error) {
+	key := BuildSortedSetKey(userID, filters, sortBy, sortOrder)
+
+	result, err, _ := tc.rebuildSortedSetFlight.Do(key, func() (interface{}, error) {
+		// Load all todos for this user (or with filters)
+		todos, _, err := tc.todoRepo.FindByUserIDAndFilters(
+			userID,
+			filters.Status,
+			filters.Priority,
+			nil, nil,
+			sortBy,
+			sortOrder,
+			0, 10000,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete old sorted set
+		pipe := tc.redisClient.Pipeline()
+		pipe.Del(ctx, key)
+
+		// Add all todos to sorted set
+		for _, todoItem := range todos {
+			score := GetTodoScore(todoItem, sortBy, sortOrder)
+			members := []redisv8.Z{{Score: score, Member: todoItem.ID}}
+			ptrMembers := make([]*redisv8.Z, len(members))
+			for i := range members {
+				ptrMembers[i] = &members[i]
+			}
+			pipe.ZAdd(ctx, key, ptrMembers...)
+		}
+
+		// Set expiration
+		pipe.Expire(ctx, key, tc.sortedSetTTL)
+
+		// Execute pipeline
+		_, err = tc.redisClient.ExecPipeline(pipe)
+		if err != nil {
+			return nil, err
+		}
+
+		return todos, nil
+	})
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return result.([]*entity.Todo), int64(len(result.([]*entity.Todo))), nil
+}
 
 // getTodoFromCacheOrDB retrieves a todo from hash cache or database
 func (tc *TodoCache) getTodoFromCacheOrDB(ctx context.Context, todoID int64) (*entity.Todo, error) {
@@ -351,16 +445,25 @@ func (tc *TodoCache) getTodoFromCacheOrDB(ctx context.Context, todoID int64) (*e
 		}
 	}
 
-	// Get from database
-	todo, err := tc.todoRepo.FindByID(todoID)
+	// Use singleflight to prevent thundering herd
+	result, err, _ := tc.todoFlight.Do(fmt.Sprintf("get-todo:%d", todoID), func() (interface{}, error) {
+		// Get from database
+		todo, err := tc.todoRepo.FindByID(todoID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update cache (synchronous)
+		_ = tc.updateHashCache(ctx, todo)
+
+		return todo, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Update cache (fire and forget)
-	go tc.updateHashCache(context.Background(), todo)
-
-	return todo, nil
+	return result.(*entity.Todo), nil
 }
 
 // updateHashCache updates the hash cache for a todo
