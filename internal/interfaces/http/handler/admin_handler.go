@@ -56,7 +56,7 @@ func (h *AdminHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	user, createErr := h.adminUseCase.CreateUser(userID, &req)
+	user, createErr := h.adminUseCase.CreateUser(c.Request.Context(), userID, &req)
 	if createErr != nil {
 		if createErr == usecase.ErrUsernameExists || createErr == usecase.ErrEmailExists {
 			response.Conflict(c, createErr.Error())
@@ -107,7 +107,7 @@ func (h *AdminHandler) ListAllUsers(c *gin.Context) {
 
 	offset := (pageInt - 1) * limitInt
 
-	users, err := h.adminUseCase.ListAllUsers(offset, limitInt)
+	users, err := h.adminUseCase.ListAllUsers(c.Request.Context(), offset, limitInt)
 	if err != nil {
 		response.InternalServerError(c, "failed to list users")
 		return
@@ -149,7 +149,7 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, usecaseErr := h.adminUseCase.GetUser(id)
+	user, usecaseErr := h.adminUseCase.GetUser(c.Request.Context(), id)
 	if usecaseErr != nil {
 		response.NotFound(c, usecaseErr.Error())
 		return
@@ -186,7 +186,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.adminUseCase.DeleteUser(id); err != nil {
+	if err := h.adminUseCase.DeleteUser(c.Request.Context(), id); err != nil {
 		response.NotFound(c, err.Error())
 		return
 	}
@@ -240,7 +240,7 @@ func (h *AdminHandler) ListAllTodos(c *gin.Context) {
 		priorityFilter = &priority
 	}
 
-	todos, err := h.adminUseCase.ListAllTodos(pageInt, limitInt, statusFilter, priorityFilter)
+	todos, err := h.adminUseCase.ListAllTodos(c.Request.Context(), pageInt, limitInt, statusFilter, priorityFilter)
 	if err != nil {
 		response.InternalServerError(c, "failed to list todos")
 		return
@@ -282,7 +282,7 @@ func (h *AdminHandler) DeleteAnyTodo(c *gin.Context) {
 		return
 	}
 
-	if err := h.adminUseCase.DeleteAnyTodo(id); err != nil {
+	if err := h.adminUseCase.DeleteAnyTodo(c.Request.Context(), id); err != nil {
 		response.NotFound(c, err.Error())
 		return
 	}

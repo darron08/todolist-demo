@@ -42,7 +42,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}
 
 	// Register user
-	user, err := h.userUseCase.Register(&req)
+	user, err := h.userUseCase.Register(c.Request.Context(), &req)
 	if err != nil {
 		if err == usecase.ErrUsernameExists {
 			response.Conflict(c, err.Error())
@@ -91,7 +91,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	// Login user
-	loginResponse, err := h.userUseCase.Login(&req)
+	loginResponse, err := h.userUseCase.Login(c.Request.Context(), &req)
 	if err != nil {
 		if err == usecase.ErrInvalidCredentials {
 			response.Unauthorized(c, err.Error())
@@ -124,7 +124,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 	}
 
 	// Refresh token
-	refreshResponse, err := h.userUseCase.RefreshToken(req.RefreshToken)
+	refreshResponse, err := h.userUseCase.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		if err == usecase.ErrInvalidToken {
 			response.Unauthorized(c, err.Error())
@@ -176,7 +176,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 
 	// Note: We should pass to actual token ID from to JWT
 	// For now, we'll use a simple implementation
-	err := h.userUseCase.Logout(userID, tokenID)
+	err := h.userUseCase.Logout(c.Request.Context(), userID, tokenID)
 	if err != nil {
 		if err == usecase.ErrInvalidToken {
 			response.Unauthorized(c, err.Error())
@@ -218,7 +218,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	}
 
 	// Get user profile
-	profile, err := h.userUseCase.GetProfile(userID)
+	profile, err := h.userUseCase.GetProfile(c.Request.Context(), userID)
 	if err != nil {
 		if err == usecase.ErrUserNotFound {
 			response.NotFound(c, err.Error())

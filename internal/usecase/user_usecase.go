@@ -58,7 +58,7 @@ func NewUserUseCase(
 }
 
 // Register registers a new user
-func (uc *UserUseCase) Register(req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
+func (uc *UserUseCase) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
 	// Validate username
 	if err := uc.usernameValidator.ValidateUsername(req.Username); err != nil {
 		return nil, ErrInvalidUsername
@@ -75,12 +75,12 @@ func (uc *UserUseCase) Register(req *dto.RegisterRequest) (*dto.RegisterResponse
 	}
 
 	// Check if username already exists
-	if _, err := uc.userRepo.FindByUsername(req.Username); err == nil {
+	if _, err := uc.userRepo.FindByUsername(ctx, req.Username); err == nil {
 		return nil, ErrUsernameExists
 	}
 
 	// Check if email already exists
-	if _, err := uc.userRepo.FindByEmail(req.Email); err == nil {
+	if _, err := uc.userRepo.FindByEmail(ctx, req.Email); err == nil {
 		return nil, ErrEmailExists
 	}
 
@@ -108,7 +108,7 @@ func (uc *UserUseCase) Register(req *dto.RegisterRequest) (*dto.RegisterResponse
 	}
 
 	// Save to database
-	if err := uc.userRepo.Create(user); err != nil {
+	if err := uc.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -122,9 +122,9 @@ func (uc *UserUseCase) Register(req *dto.RegisterRequest) (*dto.RegisterResponse
 }
 
 // Login authenticates a user and returns tokens
-func (uc *UserUseCase) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
+func (uc *UserUseCase) Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	// Find user by username
-	user, err := uc.userRepo.FindByUsername(req.Username)
+	user, err := uc.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
 		if err != nil && err.Error() == "user not found" {
 			return nil, ErrInvalidCredentials
@@ -150,7 +150,6 @@ func (uc *UserUseCase) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) 
 	}
 
 	// Store refresh token in Redis
-	ctx := context.Background()
 	if err := uc.tokenStore.StoreRefreshToken(ctx, user.ID, tokenID, refreshToken); err != nil {
 		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
@@ -174,7 +173,7 @@ func (uc *UserUseCase) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) 
 }
 
 // RefreshToken refreshes an access token using a refresh token
-func (uc *UserUseCase) RefreshToken(refreshToken string) (*dto.RefreshTokenResponse, error) {
+func (uc *UserUseCase) RefreshToken(ctx context.Context, refreshToken string) (*dto.RefreshTokenResponse, error) {
 	// Validate refresh token
 	claims, err := uc.jwtManager.ValidateRefreshToken(refreshToken)
 	if err != nil {
@@ -182,7 +181,6 @@ func (uc *UserUseCase) RefreshToken(refreshToken string) (*dto.RefreshTokenRespo
 	}
 
 	// Check if refresh token exists in Redis
-	ctx := context.Background()
 	valid, err := uc.tokenStore.ValidateRefreshToken(ctx, claims.UserID, claims.TokenID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate refresh token: %w", err)
@@ -227,9 +225,7 @@ func (uc *UserUseCase) RefreshToken(refreshToken string) (*dto.RefreshTokenRespo
 }
 
 // Logout logs out a user by invalidating their refresh token
-func (uc *UserUseCase) Logout(userID int64, refreshTokenID string) error {
-	ctx := context.Background()
-
+func (uc *UserUseCase) Logout(ctx context.Context, userID int64, refreshTokenID string) error {
 	// Validate that refresh token exists
 	valid, err := uc.tokenStore.ValidateRefreshToken(ctx, userID, refreshTokenID)
 	if err != nil {
@@ -249,8 +245,8 @@ func (uc *UserUseCase) Logout(userID int64, refreshTokenID string) error {
 }
 
 // GetProfile retrieves user profile by ID
-func (uc *UserUseCase) GetProfile(userID int64) (*dto.UserResponse, error) {
-	user, err := uc.userRepo.FindByID(userID)
+func (uc *UserUseCase) GetProfile(ctx context.Context, userID int64) (*dto.UserResponse, error) {
+	user, err := uc.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		if err != nil && err.Error() == "user not found" {
 			return nil, ErrUserNotFound

@@ -56,7 +56,7 @@ func (h *TodoHandler) CreateTodo(c *gin.Context) {
 		return
 	}
 
-	todo, createErr := h.todoUseCase.CreateTodo(userID, &req)
+	todo, createErr := h.todoUseCase.CreateTodo(c.Request.Context(), userID, &req)
 	if createErr != nil {
 		if createErr == usecase.ErrTodoTitleRequired ||
 			createErr == usecase.ErrTodoTitleTooLong ||
@@ -113,7 +113,7 @@ func (h *TodoHandler) GetTodo(c *gin.Context) {
 		return
 	}
 
-	todo, usecaseErr := h.todoUseCase.GetTodo(id, userID)
+	todo, usecaseErr := h.todoUseCase.GetTodo(c.Request.Context(), id, userID)
 	if usecaseErr != nil {
 		if usecaseErr == usecase.ErrTodoNotFound {
 			response.NotFound(c, usecaseErr.Error())
@@ -178,7 +178,7 @@ func (h *TodoHandler) UpdateTodo(c *gin.Context) {
 		return
 	}
 
-	todo, usecaseErr := h.todoUseCase.UpdateTodo(id, userID, &req)
+	todo, usecaseErr := h.todoUseCase.UpdateTodo(c.Request.Context(), id, userID, &req)
 	if usecaseErr != nil {
 		if usecaseErr == usecase.ErrTodoNotFound {
 			response.NotFound(c, usecaseErr.Error())
@@ -244,7 +244,7 @@ func (h *TodoHandler) DeleteTodo(c *gin.Context) {
 		return
 	}
 
-	err := h.todoUseCase.DeleteTodo(id, userID)
+	err := h.todoUseCase.DeleteTodo(c.Request.Context(), id, userID)
 	if err != nil {
 		if err == usecase.ErrTodoNotFound {
 			response.NotFound(c, err.Error())
@@ -309,7 +309,7 @@ func (h *TodoHandler) UpdateTodoStatus(c *gin.Context) {
 		return
 	}
 
-	todo, usecaseErr := h.todoUseCase.UpdateTodoStatus(id, userID, req.Status)
+	todo, usecaseErr := h.todoUseCase.UpdateTodoStatus(c.Request.Context(), id, userID, req.Status)
 	if usecaseErr != nil {
 		if usecaseErr == usecase.ErrTodoNotFound {
 			response.NotFound(c, usecaseErr.Error())
@@ -370,7 +370,7 @@ func (h *TodoHandler) ListTodos(c *gin.Context) {
 		return
 	}
 
-	todos, usecaseErr := h.todoUseCase.ListTodos(userID, &req)
+	todos, usecaseErr := h.todoUseCase.ListTodos(c.Request.Context(), userID, &req)
 	if usecaseErr != nil {
 		response.InternalServerError(c, "failed to list todos")
 		return

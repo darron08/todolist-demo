@@ -89,7 +89,7 @@ func (tc *TodoCache) UpdateTodo(ctx context.Context, todo *entity.Todo) error {
 
 	return lock.WithLockRetry(ctx, tc.lockTimeout, tc.lockRetryDelay, tc.lockRetry, func() error {
 		// Get old todo for comparison
-		oldTodo, err := tc.todoRepo.FindByID(todo.ID)
+		oldTodo, err := tc.todoRepo.FindByID(ctx, todo.ID)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (tc *TodoCache) UpdateTodoStatus(ctx context.Context, todoID, userID int64,
 
 	return lock.WithLockRetry(ctx, tc.lockTimeout, tc.lockRetryDelay, tc.lockRetry, func() error {
 		// Get current todo
-		todo, err := tc.todoRepo.FindByID(todoID)
+		todo, err := tc.todoRepo.FindByID(ctx, todoID)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func (tc *TodoCache) GetTodo(ctx context.Context, todoID int64) (*entity.Todo, e
 	// 2. Use singleflight to prevent thundering herd
 	result, err, _ := tc.todoFlight.Do(fmt.Sprintf("get-todo:%d", todoID), func() (interface{}, error) {
 		// Cache miss, get from database
-		todo, err := tc.todoRepo.FindByID(todoID)
+		todo, err := tc.todoRepo.FindByID(ctx, todoID)
 		if err != nil {
 			return nil, err
 		}
@@ -332,6 +332,7 @@ func (tc *TodoCache) getTodoListFromQueryCache(ctx context.Context, userID int64
 		// Cache miss, query database
 		offset := (page - 1) * limit
 		todos, total, err := tc.todoRepo.FindByUserIDAndFilters(
+			ctx,
 			userID,
 			filters.Status,
 			filters.Priority,
@@ -386,6 +387,7 @@ func (tc *TodoCache) rebuildSortedSetWithFlight(ctx context.Context, userID int6
 	result, err, _ := tc.rebuildSortedSetFlight.Do(key, func() (interface{}, error) {
 		// Load all todos for this user (or with filters)
 		todos, _, err := tc.todoRepo.FindByUserIDAndFilters(
+			ctx,
 			userID,
 			filters.Status,
 			filters.Priority,
@@ -448,7 +450,7 @@ func (tc *TodoCache) getTodoFromCacheOrDB(ctx context.Context, todoID int64) (*e
 	// Use singleflight to prevent thundering herd
 	result, err, _ := tc.todoFlight.Do(fmt.Sprintf("get-todo:%d", todoID), func() (interface{}, error) {
 		// Get from database
-		todo, err := tc.todoRepo.FindByID(todoID)
+		todo, err := tc.todoRepo.FindByID(ctx, todoID)
 		if err != nil {
 			return nil, err
 		}
@@ -532,7 +534,7 @@ func (tc *TodoCache) handleStatusChangeWithPipeline(ctx context.Context, pipe re
 
 	// Add to new status sorted set (get score from todo)
 	if len(keys) > 1 {
-		todoInfo, err := tc.todoRepo.FindByID(todoID)
+		todoInfo, err := tc.todoRepo.FindByID(ctx, todoID)
 		if err == nil {
 			score := GetTodoScore(todoInfo, "due_date", "asc")
 			members := []redisv8.Z{{Score: score, Member: todoID}}
@@ -553,6 +555,7 @@ func (tc *TodoCache) rebuildSortedSet(ctx context.Context, userID int64, filters
 
 	// Load all todos for this user (or with filters)
 	todos, _, err := tc.todoRepo.FindByUserIDAndFilters(
+		ctx,
 		userID,
 		filters.Status,
 		filters.Priority,

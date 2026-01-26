@@ -41,7 +41,7 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 		return
 	}
 
-	tag, err := h.tagUseCase.CreateTag(&req)
+	tag, err := h.tagUseCase.CreateTag(c.Request.Context(), &req)
 	if err != nil {
 		if err == usecase.ErrTagNameRequired ||
 			err == usecase.ErrTagNameTooLong {
@@ -86,7 +86,7 @@ func (h *TagHandler) GetTag(c *gin.Context) {
 		return
 	}
 
-	tag, err := h.tagUseCase.GetTag(id)
+	tag, err := h.tagUseCase.GetTag(c.Request.Context(), id)
 	if err != nil {
 		if err == usecase.ErrTagNotFound {
 			response.NotFound(c, err.Error())
@@ -133,7 +133,7 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 		return
 	}
 
-	tag, err := h.tagUseCase.UpdateTag(id, &req)
+	tag, err := h.tagUseCase.UpdateTag(c.Request.Context(), id, &req)
 	if err != nil {
 		if err == usecase.ErrTagNotFound ||
 			err == usecase.ErrTagNameRequired ||
@@ -179,7 +179,7 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 		return
 	}
 
-	err := h.tagUseCase.DeleteTag(id)
+	err := h.tagUseCase.DeleteTag(c.Request.Context(), id)
 	if err != nil {
 		if err == usecase.ErrTagNotFound {
 			response.NotFound(c, err.Error())
@@ -211,7 +211,7 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 		return
 	}
 
-	tags, err := h.tagUseCase.ListTags(req.Page, req.Limit)
+	tags, err := h.tagUseCase.ListTags(c.Request.Context(), req.Page, req.Limit)
 	if err != nil {
 		response.InternalServerError(c, "failed to list tags")
 		return
@@ -250,7 +250,7 @@ func (h *TagHandler) GetUserTags(c *gin.Context) {
 		return
 	}
 
-	tags, err := h.tagUseCase.GetTagsByUserID(userID)
+	tags, err := h.tagUseCase.GetTagsByUserID(c.Request.Context(), userID)
 	if err != nil {
 		response.InternalServerError(c, "failed to get user tags")
 		return

@@ -33,7 +33,7 @@ func NewTagUseCase(tagRepo repository.TagRepository, todoTagRepo repository.Todo
 }
 
 // CreateTag creates a new tag
-func (uc *TagUseCase) CreateTag(req *dto.CreateTagRequest) (*dto.TagResponse, error) {
+func (uc *TagUseCase) CreateTag(ctx context.Context, req *dto.CreateTagRequest) (*dto.TagResponse, error) {
 	// Validate name
 	if req.Name == "" {
 		return nil, ErrTagNameRequired
@@ -43,7 +43,7 @@ func (uc *TagUseCase) CreateTag(req *dto.CreateTagRequest) (*dto.TagResponse, er
 	}
 
 	// Check if tag already exists
-	_, err := uc.tagRepo.FindByName(req.Name)
+	_, err := uc.tagRepo.FindByName(ctx, req.Name)
 	if err == nil {
 		return nil, errors.New("tag with this name already exists")
 	}
@@ -54,13 +54,13 @@ func (uc *TagUseCase) CreateTag(req *dto.CreateTagRequest) (*dto.TagResponse, er
 	}
 
 	// Save to database
-	if err := uc.tagRepo.Create(tag); err != nil {
+	if err := uc.tagRepo.Create(ctx, tag); err != nil {
 		return nil, err
 	}
 
 	// Update cache
 	if uc.tagCache != nil {
-		if err := uc.tagCache.CreateTag(context.Background(), tag); err != nil {
+		if err := uc.tagCache.CreateTag(ctx, tag); err != nil {
 			// Log error but don't fail the request
 			// In production, use proper logging
 		}
@@ -71,15 +71,15 @@ func (uc *TagUseCase) CreateTag(req *dto.CreateTagRequest) (*dto.TagResponse, er
 }
 
 // GetTag retrieves a single tag by ID
-func (uc *TagUseCase) GetTag(id int64) (*dto.TagResponse, error) {
+func (uc *TagUseCase) GetTag(ctx context.Context, id int64) (*dto.TagResponse, error) {
 	var tag *entity.Tag
 	var err error
 
 	// Try to get from cache first
 	if uc.tagCache != nil {
-		tag, err = uc.tagCache.GetTag(context.Background(), id)
+		tag, err = uc.tagCache.GetTag(ctx, id)
 	} else {
-		tag, err = uc.tagRepo.FindByID(id)
+		tag, err = uc.tagRepo.FindByID(ctx, id)
 	}
 
 	if err != nil {
@@ -91,9 +91,9 @@ func (uc *TagUseCase) GetTag(id int64) (*dto.TagResponse, error) {
 }
 
 // UpdateTag updates an existing tag
-func (uc *TagUseCase) UpdateTag(id int64, req *dto.UpdateTagRequest) (*dto.TagResponse, error) {
+func (uc *TagUseCase) UpdateTag(ctx context.Context, id int64, req *dto.UpdateTagRequest) (*dto.TagResponse, error) {
 	// Get existing tag
-	tag, err := uc.tagRepo.FindByID(id)
+	tag, err := uc.tagRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (uc *TagUseCase) UpdateTag(id int64, req *dto.UpdateTagRequest) (*dto.TagRe
 	}
 
 	// Check if another tag with the same name exists
-	existingTag, err := uc.tagRepo.FindByName(req.Name)
+	existingTag, err := uc.tagRepo.FindByName(ctx, req.Name)
 	if err == nil && existingTag.ID != id {
 		return nil, errors.New("tag with this name already exists")
 	}
@@ -116,13 +116,13 @@ func (uc *TagUseCase) UpdateTag(id int64, req *dto.UpdateTagRequest) (*dto.TagRe
 	tag.Name = req.Name
 
 	// Save changes
-	if err := uc.tagRepo.Update(tag); err != nil {
+	if err := uc.tagRepo.Update(ctx, tag); err != nil {
 		return nil, err
 	}
 
 	// Update cache
 	if uc.tagCache != nil {
-		if err := uc.tagCache.UpdateTag(context.Background(), tag); err != nil {
+		if err := uc.tagCache.UpdateTag(ctx, tag); err != nil {
 			// Log error but don't fail the request
 			// In production, use proper logging
 		}
@@ -133,14 +133,14 @@ func (uc *TagUseCase) UpdateTag(id int64, req *dto.UpdateTagRequest) (*dto.TagRe
 }
 
 // DeleteTag deletes a tag
-func (uc *TagUseCase) DeleteTag(id int64) error {
-	if err := uc.tagRepo.Delete(id); err != nil {
+func (uc *TagUseCase) DeleteTag(ctx context.Context, id int64) error {
+	if err := uc.tagRepo.Delete(ctx, id); err != nil {
 		return err
 	}
 
 	// Delete from cache
 	if uc.tagCache != nil {
-		if err := uc.tagCache.DeleteTag(context.Background(), id); err != nil {
+		if err := uc.tagCache.DeleteTag(ctx, id); err != nil {
 			// Log error but don't fail the request
 			// In production, use proper logging
 		}
@@ -150,7 +150,7 @@ func (uc *TagUseCase) DeleteTag(id int64) error {
 }
 
 // ListTags lists all tags with pagination
-func (uc *TagUseCase) ListTags(page, limit int) (*dto.TagListResponse, error) {
+func (uc *TagUseCase) ListTags(ctx context.Context, page, limit int) (*dto.TagListResponse, error) {
 	// Set default pagination values
 	if page < 1 {
 		page = 1
@@ -167,14 +167,14 @@ func (uc *TagUseCase) ListTags(page, limit int) (*dto.TagListResponse, error) {
 	var err error
 
 	if uc.tagCache != nil {
-		tags, total, err = uc.tagCache.GetTagList(context.Background(), page, limit)
+		tags, total, err = uc.tagCache.GetTagList(ctx, page, limit)
 	} else {
-		tags, err = uc.tagRepo.List(offset, limit)
+		tags, err = uc.tagRepo.List(ctx, offset, limit)
 		if err != nil {
 			return nil, err
 		}
 		// Get all tags for counting total
-		allTags, err := uc.tagRepo.List(0, 10000)
+		allTags, err := uc.tagRepo.List(ctx, 0, 10000)
 		if err != nil {
 			return nil, err
 		}
@@ -198,13 +198,13 @@ func (uc *TagUseCase) ListTags(page, limit int) (*dto.TagListResponse, error) {
 }
 
 // GetTagsByUserID gets tags used by a specific user with todo counts
-func (uc *TagUseCase) GetTagsByUserID(userID int64) ([]*dto.TagResponse, error) {
-	tags, err := uc.tagRepo.List(0, 10000)
+func (uc *TagUseCase) GetTagsByUserID(ctx context.Context, userID int64) ([]*dto.TagResponse, error) {
+	tags, err := uc.tagRepo.List(ctx, 0, 10000)
 	if err != nil {
 		return nil, err
 	}
 
-	tagStats, err := uc.todoTagRepo.GetTagStatsByUserID(userID)
+	tagStats, err := uc.todoTagRepo.GetTagStatsByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

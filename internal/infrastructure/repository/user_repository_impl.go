@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"gorm.io/gorm"
@@ -26,10 +27,10 @@ func NewUserRepository(db *gorm.DB) repository.UserRepository {
 }
 
 // Create creates a new user
-func (r *UserRepositoryImpl) Create(user *entity.User) error {
+func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
 	// Check if username already exists
 	var existingUser entity.User
-	result := r.db.Where("username = ?", user.Username).First(&existingUser)
+	result := r.db.WithContext(ctx).Where("username = ?", user.Username).First(&existingUser)
 	if result.Error == nil {
 		return ErrUserExists
 	}
@@ -38,7 +39,7 @@ func (r *UserRepositoryImpl) Create(user *entity.User) error {
 	}
 
 	// Check if email already exists
-	result = r.db.Where("email = ?", user.Email).First(&existingUser)
+	result = r.db.WithContext(ctx).Where("email = ?", user.Email).First(&existingUser)
 	if result.Error == nil {
 		return ErrEmailExists
 	}
@@ -46,13 +47,13 @@ func (r *UserRepositoryImpl) Create(user *entity.User) error {
 		return result.Error
 	}
 
-	return r.db.Create(user).Error
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
 // FindByID finds a user by ID
-func (r *UserRepositoryImpl) FindByID(id int64) (*entity.User, error) {
+func (r *UserRepositoryImpl) FindByID(ctx context.Context, id int64) (*entity.User, error) {
 	var user entity.User
-	result := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&user)
+	result := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotFound
@@ -63,9 +64,9 @@ func (r *UserRepositoryImpl) FindByID(id int64) (*entity.User, error) {
 }
 
 // FindByUsername finds a user by username
-func (r *UserRepositoryImpl) FindByUsername(username string) (*entity.User, error) {
+func (r *UserRepositoryImpl) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var user entity.User
-	result := r.db.Where("username = ? AND deleted_at IS NULL", username).First(&user)
+	result := r.db.WithContext(ctx).Where("username = ? AND deleted_at IS NULL", username).First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotFound
@@ -76,9 +77,9 @@ func (r *UserRepositoryImpl) FindByUsername(username string) (*entity.User, erro
 }
 
 // FindByEmail finds a user by email
-func (r *UserRepositoryImpl) FindByEmail(email string) (*entity.User, error) {
+func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
-	result := r.db.Where("email = ? AND deleted_at IS NULL", email).First(&user)
+	result := r.db.WithContext(ctx).Where("email = ? AND deleted_at IS NULL", email).First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotFound
@@ -89,8 +90,8 @@ func (r *UserRepositoryImpl) FindByEmail(email string) (*entity.User, error) {
 }
 
 // Update updates a user
-func (r *UserRepositoryImpl) Update(user *entity.User) error {
-	result := r.db.Save(user)
+func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
+	result := r.db.WithContext(ctx).Save(user)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -101,8 +102,8 @@ func (r *UserRepositoryImpl) Update(user *entity.User) error {
 }
 
 // Delete soft deletes a user
-func (r *UserRepositoryImpl) Delete(id int64) error {
-	result := r.db.Where("id = ?", id).Delete(&entity.User{})
+func (r *UserRepositoryImpl) Delete(ctx context.Context, id int64) error {
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&entity.User{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -113,9 +114,9 @@ func (r *UserRepositoryImpl) Delete(id int64) error {
 }
 
 // List lists users with pagination
-func (r *UserRepositoryImpl) List(offset, limit int) ([]*entity.User, error) {
+func (r *UserRepositoryImpl) List(ctx context.Context, offset, limit int) ([]*entity.User, error) {
 	var users []*entity.User
-	result := r.db.Where("deleted_at IS NULL").Order("created_at DESC").Limit(limit).Offset(offset).Find(&users)
+	result := r.db.WithContext(ctx).Where("deleted_at IS NULL").Order("created_at DESC").Limit(limit).Offset(offset).Find(&users)
 	if result.Error != nil {
 		return nil, result.Error
 	}

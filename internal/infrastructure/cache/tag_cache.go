@@ -81,7 +81,7 @@ func (tc *TagCache) GetTag(ctx context.Context, tagID int64) (*entity.Tag, error
 	// 2. Use singleflight to prevent thundering herd
 	result, err, _ := tc.tagFlight.Do(fmt.Sprintf("get-tag:%d", tagID), func() (interface{}, error) {
 		// Cache miss, get from database
-		tagResult, err := tc.tagRepo.FindByID(tagID)
+		tagResult, err := tc.tagRepo.FindByID(ctx, tagID)
 		if err != nil {
 			return nil, err
 		}
@@ -119,13 +119,13 @@ func (tc *TagCache) GetTagList(ctx context.Context, page, limit int) ([]*entity.
 	result, err, _ := tc.tagListFlight.Do(fmt.Sprintf("taglist:%d:%d", page, limit), func() (interface{}, error) {
 		// Cache miss, query database
 		offset := (page - 1) * limit
-		tags, err := tc.tagRepo.List(offset, limit)
+		tags, err := tc.tagRepo.List(ctx, offset, limit)
 		if err != nil {
 			return nil, err
 		}
 
 		// Get total count
-		allTags, err := tc.tagRepo.List(0, 10000)
+		allTags, err := tc.tagRepo.List(ctx, 0, 10000)
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +177,7 @@ func (tc *TagCache) GetUserTags(ctx context.Context, userID int64) ([]*entity.Ta
 	// 2. Use singleflight to prevent thundering herd
 	result, err, _ := tc.userTagsFlight.Do(fmt.Sprintf("usertags:%d", userID), func() (interface{}, error) {
 		// Cache miss, query database
-		allTags, err := tc.tagRepo.List(0, 10000)
+		allTags, err := tc.tagRepo.List(ctx, 0, 10000)
 		if err != nil {
 			return nil, err
 		}

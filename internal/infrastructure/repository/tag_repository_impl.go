@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 
 	"gorm.io/gorm"
@@ -24,10 +25,10 @@ func NewTagRepository(db *gorm.DB) repository.TagRepository {
 }
 
 // Create creates a new tag
-func (r *TagRepositoryImpl) Create(tag *entity.Tag) error {
+func (r *TagRepositoryImpl) Create(ctx context.Context, tag *entity.Tag) error {
 	// Check if tag name already exists
 	var existingTag entity.Tag
-	result := r.db.Where("name = ? AND deleted_at IS NULL", tag.Name).First(&existingTag)
+	result := r.db.WithContext(ctx).Where("name = ? AND deleted_at IS NULL", tag.Name).First(&existingTag)
 	if result.Error == nil {
 		return errors.New("tag with this name already exists")
 	}
@@ -35,13 +36,13 @@ func (r *TagRepositoryImpl) Create(tag *entity.Tag) error {
 		return result.Error
 	}
 
-	return r.db.Create(tag).Error
+	return r.db.WithContext(ctx).Create(tag).Error
 }
 
 // FindByID finds a tag by ID
-func (r *TagRepositoryImpl) FindByID(id int64) (*entity.Tag, error) {
+func (r *TagRepositoryImpl) FindByID(ctx context.Context, id int64) (*entity.Tag, error) {
 	var tag entity.Tag
-	result := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&tag)
+	result := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&tag)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, ErrTagNotFound
@@ -52,9 +53,9 @@ func (r *TagRepositoryImpl) FindByID(id int64) (*entity.Tag, error) {
 }
 
 // FindByName finds a tag by name
-func (r *TagRepositoryImpl) FindByName(name string) (*entity.Tag, error) {
+func (r *TagRepositoryImpl) FindByName(ctx context.Context, name string) (*entity.Tag, error) {
 	var tag entity.Tag
-	result := r.db.Where("name = ? AND deleted_at IS NULL", name).First(&tag)
+	result := r.db.WithContext(ctx).Where("name = ? AND deleted_at IS NULL", name).First(&tag)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, ErrTagNotFound
@@ -65,8 +66,8 @@ func (r *TagRepositoryImpl) FindByName(name string) (*entity.Tag, error) {
 }
 
 // Update updates a tag
-func (r *TagRepositoryImpl) Update(tag *entity.Tag) error {
-	result := r.db.Save(tag)
+func (r *TagRepositoryImpl) Update(ctx context.Context, tag *entity.Tag) error {
+	result := r.db.WithContext(ctx).Save(tag)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -77,8 +78,8 @@ func (r *TagRepositoryImpl) Update(tag *entity.Tag) error {
 }
 
 // Delete soft deletes a tag
-func (r *TagRepositoryImpl) Delete(id int64) error {
-	result := r.db.Where("id = ?", id).Delete(&entity.Tag{})
+func (r *TagRepositoryImpl) Delete(ctx context.Context, id int64) error {
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&entity.Tag{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -89,9 +90,9 @@ func (r *TagRepositoryImpl) Delete(id int64) error {
 }
 
 // List lists all tags with pagination
-func (r *TagRepositoryImpl) List(offset, limit int) ([]*entity.Tag, error) {
+func (r *TagRepositoryImpl) List(ctx context.Context, offset, limit int) ([]*entity.Tag, error) {
 	var tags []*entity.Tag
-	result := r.db.Where("deleted_at IS NULL").
+	result := r.db.WithContext(ctx).Where("deleted_at IS NULL").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).

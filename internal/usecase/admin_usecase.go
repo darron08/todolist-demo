@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -37,7 +38,7 @@ func NewAdminUseCase(
 }
 
 // CreateUser creates a new user with specified role (admin only)
-func (uc *AdminUseCase) CreateUser(userID int64, req *dto.AdminCreateUserRequest) (*dto.RegisterResponse, error) {
+func (uc *AdminUseCase) CreateUser(ctx context.Context, userID int64, req *dto.AdminCreateUserRequest) (*dto.RegisterResponse, error) {
 	role := entity.UserRoleUser
 	if req.Role == "admin" {
 		role = entity.UserRoleAdmin
@@ -59,12 +60,12 @@ func (uc *AdminUseCase) CreateUser(userID int64, req *dto.AdminCreateUserRequest
 	}
 
 	// Check if username already exists
-	if _, err := uc.userRepo.FindByUsername(req.Username); err == nil {
+	if _, err := uc.userRepo.FindByUsername(ctx, req.Username); err == nil {
 		return nil, ErrUsernameExists
 	}
 
 	// Check if email already exists
-	if _, err := uc.userRepo.FindByEmail(req.Email); err == nil {
+	if _, err := uc.userRepo.FindByEmail(ctx, req.Email); err == nil {
 		return nil, ErrEmailExists
 	}
 
@@ -86,7 +87,7 @@ func (uc *AdminUseCase) CreateUser(userID int64, req *dto.AdminCreateUserRequest
 	}
 
 	// Save to database
-	if err := uc.userRepo.Create(user); err != nil {
+	if err := uc.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -100,14 +101,14 @@ func (uc *AdminUseCase) CreateUser(userID int64, req *dto.AdminCreateUserRequest
 }
 
 // ListAllUsers lists all users with pagination (admin only)
-func (uc *AdminUseCase) ListAllUsers(offset, limit int) (*dto.UserListResponse, error) {
-	users, err := uc.userRepo.List(offset, limit)
+func (uc *AdminUseCase) ListAllUsers(ctx context.Context, offset, limit int) (*dto.UserListResponse, error) {
+	users, err := uc.userRepo.List(ctx, offset, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// Calculate total
-	total, err := uc.countTotalUsers()
+	total, err := uc.countTotalUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +126,8 @@ func (uc *AdminUseCase) ListAllUsers(offset, limit int) (*dto.UserListResponse, 
 }
 
 // GetUser gets a specific user by ID (admin only)
-func (uc *AdminUseCase) GetUser(id int64) (*dto.UserResponse, error) {
-	user, err := uc.userRepo.FindByID(id)
+func (uc *AdminUseCase) GetUser(ctx context.Context, id int64) (*dto.UserResponse, error) {
+	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
@@ -140,12 +141,12 @@ func (uc *AdminUseCase) GetUser(id int64) (*dto.UserResponse, error) {
 }
 
 // DeleteUser deletes a user by ID (admin only)
-func (uc *AdminUseCase) DeleteUser(id int64) error {
-	return uc.userRepo.Delete(id)
+func (uc *AdminUseCase) DeleteUser(ctx context.Context, id int64) error {
+	return uc.userRepo.Delete(ctx, id)
 }
 
 // ListAllTodos lists all todos from all users with pagination and filters (admin only)
-func (uc *AdminUseCase) ListAllTodos(page, limit int, status *string, priority *string) (*dto.TodoListResponse, error) {
+func (uc *AdminUseCase) ListAllTodos(ctx context.Context, page, limit int, status *string, priority *string) (*dto.TodoListResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -156,13 +157,13 @@ func (uc *AdminUseCase) ListAllTodos(page, limit int, status *string, priority *
 	offset := (page - 1) * limit
 
 	// Get todos with filters (without user ID filter)
-	todos, err := uc.todoRepo.FindByFilters(status, priority, offset, limit)
+	todos, err := uc.todoRepo.FindByFilters(ctx, status, priority, offset, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// Calculate total
-	total, err := uc.countTotalTodos()
+	total, err := uc.countTotalTodos(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -180,13 +181,13 @@ func (uc *AdminUseCase) ListAllTodos(page, limit int, status *string, priority *
 }
 
 // DeleteAnyTodo deletes any todo by ID regardless of ownership (admin only)
-func (uc *AdminUseCase) DeleteAnyTodo(id int64) error {
-	return uc.todoRepo.Delete(id)
+func (uc *AdminUseCase) DeleteAnyTodo(ctx context.Context, id int64) error {
+	return uc.todoRepo.Delete(ctx, id)
 }
 
 // countTotalUsers counts total users
-func (uc *AdminUseCase) countTotalUsers() (int64, error) {
-	users, err := uc.userRepo.List(0, 0)
+func (uc *AdminUseCase) countTotalUsers(ctx context.Context) (int64, error) {
+	users, err := uc.userRepo.List(ctx, 0, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -194,8 +195,8 @@ func (uc *AdminUseCase) countTotalUsers() (int64, error) {
 }
 
 // countTotalTodos counts total todos
-func (uc *AdminUseCase) countTotalTodos() (int64, error) {
-	todos, err := uc.todoRepo.List(0, 0)
+func (uc *AdminUseCase) countTotalTodos(ctx context.Context) (int64, error) {
+	todos, err := uc.todoRepo.List(ctx, 0, 0)
 	if err != nil {
 		return 0, err
 	}

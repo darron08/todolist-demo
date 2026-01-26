@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"gorm.io/gorm"
 
 	"github.com/darron08/todolist-demo/internal/domain/entity"
@@ -18,7 +20,7 @@ func NewTodoTagRepository(db *gorm.DB) repository.TodoTagRepository {
 }
 
 // AddTagsToTodo adds tags to a todo
-func (r *TodoTagRepositoryImpl) AddTagsToTodo(todoID int64, tagIDs []int64) error {
+func (r *TodoTagRepositoryImpl) AddTagsToTodo(ctx context.Context, todoID int64, tagIDs []int64) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
@@ -31,23 +33,23 @@ func (r *TodoTagRepositoryImpl) AddTagsToTodo(todoID int64, tagIDs []int64) erro
 		})
 	}
 
-	return r.db.Create(&todoTags).Error
+	return r.db.WithContext(ctx).Create(&todoTags).Error
 }
 
 // RemoveTagsFromTodo removes tags from a todo
-func (r *TodoTagRepositoryImpl) RemoveTagsFromTodo(todoID int64, tagIDs []int64) error {
+func (r *TodoTagRepositoryImpl) RemoveTagsFromTodo(ctx context.Context, todoID int64, tagIDs []int64) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
 
-	return r.db.Where("todo_id = ? AND tag_id IN ?", todoID, tagIDs).
+	return r.db.WithContext(ctx).Where("todo_id = ? AND tag_id IN ?", todoID, tagIDs).
 		Delete(&entity.TodoTag{}).
 		Error
 }
 
 // ReplaceTagsForTodo replaces all tags for a todo
-func (r *TodoTagRepositoryImpl) ReplaceTagsForTodo(todoID int64, tagIDs []int64) error {
-	tx := r.db.Begin()
+func (r *TodoTagRepositoryImpl) ReplaceTagsForTodo(ctx context.Context, todoID int64, tagIDs []int64) error {
+	tx := r.db.WithContext(ctx).Begin()
 
 	if err := tx.Where("todo_id = ?", todoID).Delete(&entity.TodoTag{}).Error; err != nil {
 		tx.Rollback()
@@ -72,10 +74,10 @@ func (r *TodoTagRepositoryImpl) ReplaceTagsForTodo(todoID int64, tagIDs []int64)
 }
 
 // GetTagsByTodoID gets all tags for a todo
-func (r *TodoTagRepositoryImpl) GetTagsByTodoID(todoID int64) ([]*entity.Tag, error) {
+func (r *TodoTagRepositoryImpl) GetTagsByTodoID(ctx context.Context, todoID int64) ([]*entity.Tag, error) {
 	var tags []*entity.Tag
 
-	result := r.db.Table("tags").
+	result := r.db.WithContext(ctx).Table("tags").
 		Select("tags.*").
 		Joins("INNER JOIN todo_tags ON todo_tags.tag_id = tags.id").
 		Where("todo_tags.todo_id = ? AND tags.deleted_at IS NULL", todoID).
@@ -89,11 +91,11 @@ func (r *TodoTagRepositoryImpl) GetTagsByTodoID(todoID int64) ([]*entity.Tag, er
 }
 
 // GetTodosByTagID gets all todos for a tag
-func (r *TodoTagRepositoryImpl) GetTodosByTagID(tagID int64, offset, limit int) ([]*entity.Todo, int64, error) {
+func (r *TodoTagRepositoryImpl) GetTodosByTagID(ctx context.Context, tagID int64, offset, limit int) ([]*entity.Todo, int64, error) {
 	var todos []*entity.Todo
 	var total int64
 
-	query := r.db.Model(&entity.Todo{}).
+	query := r.db.WithContext(ctx).Model(&entity.Todo{}).
 		Joins("INNER JOIN todo_tags ON todo_tags.todo_id = todos.id").
 		Where("todo_tags.tag_id = ? AND todos.deleted_at IS NULL", tagID)
 
@@ -114,7 +116,7 @@ func (r *TodoTagRepositoryImpl) GetTodosByTagID(tagID int64, offset, limit int) 
 }
 
 // GetTagStatsByUserID gets tag statistics for a user
-func (r *TodoTagRepositoryImpl) GetTagStatsByUserID(userID int64) (map[int64]int64, error) {
+func (r *TodoTagRepositoryImpl) GetTagStatsByUserID(ctx context.Context, userID int64) (map[int64]int64, error) {
 	type TagStat struct {
 		TagID int64
 		Count int64
@@ -122,7 +124,7 @@ func (r *TodoTagRepositoryImpl) GetTagStatsByUserID(userID int64) (map[int64]int
 
 	var stats []TagStat
 
-	result := r.db.Table("todo_tags").
+	result := r.db.WithContext(ctx).Table("todo_tags").
 		Select("tag_id, COUNT(*) as count").
 		Joins("INNER JOIN todos ON todos.id = todo_tags.todo_id").
 		Where("todos.user_id = ?", userID).
