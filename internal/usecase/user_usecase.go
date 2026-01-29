@@ -37,6 +37,7 @@ type UserUseCase struct {
 	passwordValidator *utils.Validator
 	usernameValidator *utils.Validator
 	emailValidator    *utils.Validator
+	hashedPassword    string
 }
 
 // NewUserUseCase creates a new user use case
@@ -226,19 +227,26 @@ func (uc *UserUseCase) RefreshToken(ctx context.Context, refreshToken string) (*
 
 // Logout logs out a user by invalidating their refresh token
 func (uc *UserUseCase) Logout(ctx context.Context, userID int64, refreshTokenID string) error {
-	// Validate that refresh token exists
-	valid, err := uc.tokenStore.ValidateRefreshToken(ctx, userID, refreshTokenID)
-	if err != nil {
-		return fmt.Errorf("failed to validate refresh token: %w", err)
-	}
+	// If refresh token ID is provided, validate and delete it
+	if refreshTokenID != "" {
+		valid, err := uc.tokenStore.ValidateRefreshToken(ctx, userID, refreshTokenID)
+		if err != nil {
+			return fmt.Errorf("failed to validate refresh token: %w", err)
+		}
 
-	if !valid {
-		return ErrInvalidToken
-	}
+		if !valid {
+			return ErrInvalidToken
+		}
 
-	// Delete refresh token from Redis
-	if err := uc.tokenStore.DeleteRefreshToken(ctx, userID, refreshTokenID); err != nil {
-		return fmt.Errorf("failed to delete refresh token: %w", err)
+		// Delete refresh token from Redis
+		if err := uc.tokenStore.DeleteRefreshToken(ctx, userID, refreshTokenID); err != nil {
+			return fmt.Errorf("failed to delete refresh token: %w", err)
+		}
+	} else {
+		// If no specific token ID, delete all refresh tokens for this user
+		if err := uc.tokenStore.DeleteAllUserTokens(ctx, userID); err != nil {
+			return fmt.Errorf("failed to delete all user refresh tokens: %w", err)
+		}
 	}
 
 	return nil

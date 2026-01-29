@@ -76,7 +76,7 @@ func SetupRouter(
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
 			auth.POST("/refresh", userHandler.RefreshToken)
-			auth.POST("/logout", userHandler.Logout)
+			auth.POST("/logout", middleware.AuthMiddleware(jwtManager), userHandler.Logout)
 		}
 
 		// User routes (require authentication)

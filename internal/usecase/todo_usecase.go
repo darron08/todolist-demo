@@ -8,7 +8,9 @@ import (
 	"github.com/darron08/todolist-demo/internal/domain/entity"
 	"github.com/darron08/todolist-demo/internal/domain/repository"
 	"github.com/darron08/todolist-demo/internal/infrastructure/cache"
+	tagRepositoryImpl "github.com/darron08/todolist-demo/internal/infrastructure/repository"
 	"github.com/darron08/todolist-demo/pkg/dto"
+	"gorm.io/gorm"
 )
 
 var (
@@ -99,7 +101,7 @@ func (uc *TodoUseCase) CreateTodo(ctx context.Context, userID int64, req *dto.Cr
 		for _, tagName := range req.Tags {
 			tag, err := uc.tagRepo.FindByName(ctx, tagName)
 			if err != nil {
-				if err == ErrTagNotFound {
+				if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, tagRepositoryImpl.ErrTagNotFound) {
 					// Create new tag
 					newTag := &entity.Tag{Name: tagName}
 					if err := uc.tagRepo.Create(ctx, newTag); err != nil {
